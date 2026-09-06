@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { @apply border-mauve-200 dark:border-mauve-800; }
+  html { scroll-behavior: smooth; }
+  body { @apply bg-mauve-50 text-base text-mauve-900 antialiased dark:bg-mauve-950 dark:text-mauve-50; }
+  ::selection { @apply bg-mauve-300 text-mauve-950; }
+}
+@layer utilities {
+  /* Keep body copy readable across the product: primary 16px, supporting 14px. */
+  .text-sm { font-size: 1rem; line-height: 1.5rem; }
+  .text-xs { font-size: .875rem; line-height: 1.25rem; }
+}
+.hero-grid { max-width: none !important; background-image: linear-gradient(to right, rgba(129,117,139,.11) 1px, transparent 1px), linear-gradient(to bottom, rgba(129,117,139,.11) 1px, transparent 1px); background-size: 52px 52px; }
+.hero-grid > .relative.grid { max-width: 80rem; margin-left: auto; margin-right: auto; }
+.prism-loader-grid { background-image: linear-gradient(rgba(208,201,213,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(208,201,213,.07) 1px, transparent 1px); background-size: 34px 34px; mask-image: radial-gradient(circle at center, black 0%, transparent 72%); }
+.dark .hero-grid { background-image: linear-gradient(to right, rgba(208,201,213,.09) 1px, transparent 1px), linear-gradient(to bottom, rgba(208,201,213,.09) 1px, transparent 1px); }
+.image-wash { background: linear-gradient(180deg, transparent 35%, rgba(22,18,24,.76) 100%); }
+.soft-ring { box-shadow: 0 0 0 8px rgba(129,117,139,.08), 0 18px 50px rgba(22,18,24,.22); }
+@keyframes rise { from { opacity: 0; transform: translateY(22px) } to { opacity: 1; transform: translateY(0) } }
+.rise { animation: rise .7s cubic-bezier(.22,1,.36,1) both; }
+.rise-2 { animation: rise .7s .14s cubic-bezier(.22,1,.36,1) both; }
+.rise-3 { animation: rise .7s .28s cubic-bezier(.22,1,.36,1) both; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(18px) scale(.96) } to { opacity: 1; transform: translateY(0) scale(1) } }
+.toast-in { animation: toast-in .32s cubic-bezier(.22,1,.36,1) both; }
+.brand-glow { position: relative; isolation: isolate; overflow: visible; background: linear-gradient(125deg, #f0abfc 0%, #e879f9 24%, #67e8f9 54%, #fde68a 76%, #f0abfc 100%) !important; background-size: 260% 260%; color: #161218 !important; box-shadow: 0 0 0 0 rgba(217,70,239,.42), 0 10px 26px rgba(8,145,178,.22); animation: logo-pulse 2.8s ease-in-out infinite, logo-gradient 7s ease-in-out infinite; }
+.brand-glow::after { content: ""; position: absolute; z-index: -1; inset: -5px; border: 1px solid rgba(103,232,249,.45); border-radius: inherit; opacity: .7; animation: logo-orbit 4.5s linear infinite; }
+.brand-wordmark { display: inline-block; background: linear-gradient(100deg, #f0abfc 0%, #e879f9 25%, #67e8f9 48%, #fde68a 69%, #f0abfc 100%); background-size: 240% auto; -webkit-background-clip: text; background-clip: text; color: transparent !important; letter-spacing: .01em; text-shadow: 0 0 20px rgba(217,70,239,.16); animation: wordmark-shimmer 6.5s linear infinite, wordmark-breathe 3.8s ease-in-out infinite; }
+.profile-frame::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(115deg, transparent 28%, rgba(255,255,255,.36) 47%, transparent 66%); transform: translateX(-130%); animation: image-shine 5.5s ease-in-out infinite; }
+.button-shine { position: relative; overflow: hidden; isolation: isolate; }
+.button-shine::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(115deg, transparent 28%, rgba(255,255,255,.24) 48%, transparent 68%); transform: translateX(-125%); transition: transform .65s ease; }
+.button-shine:hover::after { transform: translateX(125%); }
+.pulse-dot { height: .45rem; width: .45rem; border-radius: 9999px; background: #d946ef; box-shadow: 0 0 0 0 rgba(217,70,239,.6); animation: ping-soft 1.8s infinite; }
+.shimmer-text { background: linear-gradient(100deg, #a21caf 8%, #0891b2 43%, #d946ef 57%, #a21caf 92%); background-size: 220% auto; -webkit-background-clip: text; background-clip: text; color: transparent; animation: text-shimmer 5s linear infinite; }
+.ticker-track { animation: ticker 26s linear infinite; }
+@keyframes logo-pulse { 50% { box-shadow: 0 0 0 9px rgba(217,70,239,0), 0 14px 34px rgba(8,145,178,.32); } }
+@keyframes logo-gradient { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+@keyframes logo-orbit { from { transform: rotate(0deg) scale(.94); border-color: rgba(103,232,249,.45); } 50% { border-color: rgba(250,204,21,.7); } to { transform: rotate(360deg) scale(1.1); border-color: rgba(103,232,249,.45); } }
+@keyframes wordmark-shimmer { to { background-position: 240% center; } }
+@keyframes wordmark-breathe { 50% { letter-spacing: .045em; filter: brightness(1.14); } }
+@keyframes image-shine { 0%, 56% { transform: translateX(-130%); } 82%, 100% { transform: translateX(130%); } }
+@keyframes ping-soft { 70%, 100% { box-shadow: 0 0 0 7px rgba(217,70,239,0); } }
+@keyframes text-shimmer { to { background-position: 220% center; } }
+@keyframes ticker { to { transform: translateX(-50%); } }
+@keyframes counter-sparks { 0%, 100% { transform: translate3d(-1%, -2%, 0) rotate(0deg); } 50% { transform: translate3d(2%, 3%, 0) rotate(3deg); } }
+@keyframes counter-glow { 0%, 100% { transform: translate3d(-4%, 0, 0) scale(1); opacity: .16; } 50% { transform: translate3d(5%, -3%, 0) scale(1.12); opacity: .3; } }
+section[aria-label="Project demo activity counter"]::before { content: ""; pointer-events: none; position: absolute; z-index: 0; inset: -14%; opacity: .72; background-image: radial-gradient(circle, rgba(103,232,249,.8) 0 1px, transparent 1.7px), radial-gradient(circle, rgba(240,171,252,.7) 0 1px, transparent 1.7px), radial-gradient(circle, rgba(253,230,138,.55) 0 1px, transparent 1.7px); background-position: 0 0, 35px 52px, 78px 18px; background-size: 118px 118px, 164px 164px, 208px 208px; mask-image: radial-gradient(ellipse at center, black 8%, transparent 75%); animation: counter-sparks 15s ease-in-out infinite; }
+section[aria-label="Project demo activity counter"]::after { content: ""; pointer-events: none; position: absolute; z-index: 0; inset: -30%; background: radial-gradient(circle at 25% 50%, rgba(217,70,239,.12), transparent 24%), radial-gradient(circle at 78% 48%, rgba(34,211,238,.1), transparent 26%); filter: blur(42px); animation: counter-glow 11s ease-in-out infinite; }
+section[aria-label="Project demo activity counter"] > div { z-index: 1; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; } }

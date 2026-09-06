@@ -1,0 +1,10 @@
+node_modules/
+.next/
+data/*.db
+data/*.db-shm
+data/*.db-wal
+.env.local
+.env
+/public/uploads/
+/tsconfig.tsbuildinfo
+/yarn-error.log
