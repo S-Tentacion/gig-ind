@@ -6,7 +6,9 @@ export type Member = { id: number; name: string; contact: string; city: string; 
 export type PaymentPurpose = "joining" | "kit" | `boost_${number}`;
 type PendingPayment = { orderId: string; name: string; contact: string; city: string; amount: number; purpose: PaymentPurpose; status: string };
 
-const dbPath = process.env.SQLITE_DB_PATH || path.join(process.cwd(), "data", "gigolo-india.db");
+// Vercel Functions can only write to /tmp. This keeps the POC APIs functional
+// after deployment; use Supabase or another managed database for durable data.
+const dbPath = process.env.SQLITE_DB_PATH || (process.env.VERCEL ? path.join("/tmp", "gigolo-india.db") : path.join(process.cwd(), "data", "gigolo-india.db"));
 const globalForDb = globalThis as unknown as { gigoloDb?: Database.Database };
 
 function ensureMemberColumns(db: Database.Database) {
