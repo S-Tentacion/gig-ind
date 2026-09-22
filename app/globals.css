@@ -5,6 +5,8 @@
 @layer base {
   * { @apply border-mauve-200 dark:border-mauve-800; }
   html { scroll-behavior: smooth; }
+  html:lang(hi) { font-family: "Nirmala UI", "Noto Sans Devanagari", "Mangal", sans-serif; }
+  html:lang(hi) .font-serif { font-family: "Noto Serif Devanagari", "Nirmala UI", "Mangal", serif; }
   body { @apply bg-mauve-50 text-base text-mauve-900 antialiased dark:bg-mauve-950 dark:text-mauve-50; }
   ::selection { @apply bg-mauve-300 text-mauve-950; }
 }
@@ -34,6 +36,8 @@
 .button-shine:hover::after { transform: translateX(125%); }
 .pulse-dot { height: .45rem; width: .45rem; border-radius: 9999px; background: #d946ef; box-shadow: 0 0 0 0 rgba(217,70,239,.6); animation: ping-soft 1.8s infinite; }
 .shimmer-text { background: linear-gradient(100deg, #a21caf 8%, #0891b2 43%, #d946ef 57%, #a21caf 92%); background-size: 220% auto; -webkit-background-clip: text; background-clip: text; color: transparent; animation: text-shimmer 5s linear infinite; }
+.directory-skeleton { position: relative; overflow: hidden; background: rgba(255,255,255,.055); }
+.directory-skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(-115%); background: linear-gradient(100deg, transparent 20%, rgba(207,250,254,.13) 47%, transparent 72%); animation: directory-skeleton-sweep 1.75s ease-in-out infinite; }
 .ticker-track { animation: ticker 26s linear infinite; }
 @keyframes logo-pulse { 50% { box-shadow: 0 0 0 9px rgba(217,70,239,0), 0 14px 34px rgba(8,145,178,.32); } }
 @keyframes logo-gradient { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
@@ -43,10 +47,6 @@
 @keyframes image-shine { 0%, 56% { transform: translateX(-130%); } 82%, 100% { transform: translateX(130%); } }
 @keyframes ping-soft { 70%, 100% { box-shadow: 0 0 0 7px rgba(217,70,239,0); } }
 @keyframes text-shimmer { to { background-position: 220% center; } }
+@keyframes directory-skeleton-sweep { to { transform: translateX(115%); } }
 @keyframes ticker { to { transform: translateX(-50%); } }
-@keyframes counter-sparks { 0%, 100% { transform: translate3d(-1%, -2%, 0) rotate(0deg); } 50% { transform: translate3d(2%, 3%, 0) rotate(3deg); } }
-@keyframes counter-glow { 0%, 100% { transform: translate3d(-4%, 0, 0) scale(1); opacity: .16; } 50% { transform: translate3d(5%, -3%, 0) scale(1.12); opacity: .3; } }
-section[aria-label="Project demo activity counter"]::before { content: ""; pointer-events: none; position: absolute; z-index: 0; inset: -14%; opacity: .72; background-image: radial-gradient(circle, rgba(103,232,249,.8) 0 1px, transparent 1.7px), radial-gradient(circle, rgba(240,171,252,.7) 0 1px, transparent 1.7px), radial-gradient(circle, rgba(253,230,138,.55) 0 1px, transparent 1.7px); background-position: 0 0, 35px 52px, 78px 18px; background-size: 118px 118px, 164px 164px, 208px 208px; mask-image: radial-gradient(ellipse at center, black 8%, transparent 75%); animation: counter-sparks 15s ease-in-out infinite; }
-section[aria-label="Project demo activity counter"]::after { content: ""; pointer-events: none; position: absolute; z-index: 0; inset: -30%; background: radial-gradient(circle at 25% 50%, rgba(217,70,239,.12), transparent 24%), radial-gradient(circle at 78% 48%, rgba(34,211,238,.1), transparent 26%); filter: blur(42px); animation: counter-glow 11s ease-in-out infinite; }
-section[aria-label="Project demo activity counter"] > div { z-index: 1; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; } }

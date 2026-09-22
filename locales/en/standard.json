@@ -1,0 +1,9 @@
+{
+  "memberAccess": "MEMBER ACCESS",
+  "welcome": "Welcome back, {firstName}.",
+  "availability": "Tonight in {city}: {count} companions are available. Browse privately and set the pace.",
+  "browseCity": "Browse {city}",
+  "upgrade": "Upgrade to PRISM",
+  "recommended": "RECOMMENDED FOR YOU",
+  "available": "Available tonight."
+}

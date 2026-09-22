@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { activateMemberBoost } from "@/lib/db";
 import { getCurrentMember } from "@/lib/current-member";
+import { recordBoostActivation } from "@/lib/supabase-payment-ledger";
 
 export const runtime = "nodejs";
 
@@ -27,6 +28,11 @@ export async function POST() {
     const result = await getPremiumMember();
     if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
     const member = activateMemberBoost(result.member.id);
+    try {
+      await recordBoostActivation({ authUserId: result.member.authUserId, boostCredits: member.boostCredits, boostExpiresAt: member.boostExpiresAt });
+    } catch {
+      // The member still receives the activation; a later sign-in reconciles the balance and expiry.
+    }
     return NextResponse.json({ boostExpiresAt: member.boostExpiresAt, boostCredits: member.boostCredits, boostActive: true });
   } catch (error) {
     if (error instanceof Error && error.message === "BOOST_NOT_AVAILABLE") return NextResponse.json({ error: "Use an available Boost credit after the active hour ends." }, { status: 409 });

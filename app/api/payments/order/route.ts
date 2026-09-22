@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { createPendingPayment, getMemberByContact, type PaymentPurpose } from "@/lib/db";
+import { createPendingPayment, getMemberByContact, getMemberByUsername, type PaymentPurpose } from "@/lib/db";
 import { getCurrentMember } from "@/lib/current-member";
+import { recordPaymentOrder } from "@/lib/supabase-payment-ledger";
 
 export const runtime = "nodejs";
 
@@ -13,7 +14,7 @@ export async function POST(request: Request) {
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
   if (!keyId || !keySecret) return NextResponse.json({ error: "Razorpay test keys are not configured yet. Add them to .env.local." }, { status: 503 });
 
-  const body = await request.json() as { kind?: string; name?: string; contact?: string; city?: string; boostPack?: number };
+  const body = await request.json() as { kind?: string; name?: string; username?: string; contact?: string; city?: string; boostPack?: number };
   let purpose: PaymentPurpose = body.kind === "kit" ? "kit" : "joining";
   if (body.kind === "boost") {
     const pack = body.boostPack;
@@ -21,6 +22,7 @@ export async function POST(request: Request) {
     purpose = `boost_${pack}` as PaymentPurpose;
   }
   let name = typeof body.name === "string" ? body.name.trim() : "";
+  let username = typeof body.username === "string" ? body.username.trim() : "";
   let contact = typeof body.contact === "string" ? body.contact.trim() : "";
   let city = typeof body.city === "string" ? body.city.trim() : "";
   const amount = purpose === "kit" ? KIT_AMOUNT : purpose.startsWith("boost_") ? Number(purpose.replace("boost_", "")) * BOOST_CREDIT_AMOUNT : JOINING_AMOUNT;
@@ -30,11 +32,13 @@ export async function POST(request: Request) {
     if (!member) return NextResponse.json({ error: `Please sign in before purchasing ${purpose === "kit" ? "the Gigolo Kit" : "Profile Boost"}.` }, { status: 401 });
     if (purpose === "kit" && member.kitPurchased) return NextResponse.json({ error: "Your account already has premium access." }, { status: 409 });
     if (purpose.startsWith("boost_") && !member.kitPurchased) return NextResponse.json({ error: "Profile Boost is available with the Gigolo Kit." }, { status: 403 });
-    ({ name, contact, city } = member);
+    ({ name, username, contact, city } = member);
   } else {
     const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact);
     const isPhone = /^[+\d][\d\s-]{7,}$/.test(contact);
-    if (name.length < 2 || city.length < 2 || (!isEmail && !isPhone)) return NextResponse.json({ error: "Please enter a name, city, and a valid email or phone number." }, { status: 400 });
+    if (name.length < 2 || city.length < 2 || (!isEmail && !isPhone)) return NextResponse.json({ error: "Please enter your government-ID first name, city, and a valid email or phone number." }, { status: 400 });
+    if (!/^[a-zA-Z0-9_]{3,24}$/.test(username)) return NextResponse.json({ error: "Choose a username with 3 to 24 letters, numbers, or underscores." }, { status: 400 });
+    if (getMemberByUsername(username)) return NextResponse.json({ error: "That username is already taken. Please choose another one." }, { status: 409 });
     if (getMemberByContact(contact)) return NextResponse.json({ error: "An account with this email or phone number already exists. Please sign in." }, { status: 409 });
   }
 
@@ -44,6 +48,11 @@ export async function POST(request: Request) {
   if (!razorpayResponse.ok) return NextResponse.json({ error: "Razorpay could not create a test order. Check your test keys." }, { status: 502 });
   const order = await razorpayResponse.json() as { id: string; amount: number; currency: string };
 
-  createPendingPayment({ orderId: order.id, name, contact, city, amount, purpose });
+  try {
+    createPendingPayment({ orderId: order.id, name, username: purpose === "joining" ? username : null, contact, city, amount, purpose });
+    await recordPaymentOrder({ orderId: order.id, name, username: purpose === "joining" ? username : null, contact, city, amount, purpose });
+  } catch {
+    return NextResponse.json({ error: "We could not prepare your secure payment record. Please try again in a moment." }, { status: 503 });
+  }
   return NextResponse.json({ orderId: order.id, amount: order.amount, currency: order.currency, keyId, purpose });
 }

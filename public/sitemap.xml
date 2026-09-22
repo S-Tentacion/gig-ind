@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url><loc>https://gig-ind.vercel.app/en</loc><lastmod>2026-09-21</lastmod><changefreq>weekly</changefreq><priority>1.0</priority><xhtml:link rel="alternate" hreflang="en-IN" href="https://gig-ind.vercel.app/en"/><xhtml:link rel="alternate" hreflang="hi-IN" href="https://gig-ind.vercel.app/hi"/><xhtml:link rel="alternate" hreflang="x-default" href="https://gig-ind.vercel.app/en"/></url>
+  <url><loc>https://gig-ind.vercel.app/hi</loc><lastmod>2026-09-21</lastmod><changefreq>weekly</changefreq><priority>1.0</priority><xhtml:link rel="alternate" hreflang="en-IN" href="https://gig-ind.vercel.app/en"/><xhtml:link rel="alternate" hreflang="hi-IN" href="https://gig-ind.vercel.app/hi"/></url>
+  <url><loc>https://gig-ind.vercel.app/en/browse</loc><lastmod>2026-09-21</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://gig-ind.vercel.app/hi/browse</loc><lastmod>2026-09-21</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://gig-ind.vercel.app/en/membership</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://gig-ind.vercel.app/hi/membership</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://gig-ind.vercel.app/en/become-companion</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://gig-ind.vercel.app/hi/become-companion</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://gig-ind.vercel.app/en/privacy</loc><lastmod>2026-09-21</lastmod><changefreq>yearly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://gig-ind.vercel.app/hi/privacy</loc><lastmod>2026-09-21</lastmod><changefreq>yearly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://gig-ind.vercel.app/en/terms</loc><lastmod>2026-09-21</lastmod><changefreq>yearly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://gig-ind.vercel.app/hi/terms</loc><lastmod>2026-09-21</lastmod><changefreq>yearly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://gig-ind.vercel.app/en/safety</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://gig-ind.vercel.app/hi/safety</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://gig-ind.vercel.app/en/community-guidelines</loc><lastmod>2026-09-21</lastmod><changefreq>yearly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://gig-ind.vercel.app/hi/community-guidelines</loc><lastmod>2026-09-21</lastmod><changefreq>yearly</changefreq><priority>0.5</priority></url>
+</urlset>

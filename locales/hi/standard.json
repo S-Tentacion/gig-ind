@@ -1,0 +1,9 @@
+{
+  "memberAccess": "सदस्य एक्सेस",
+  "welcome": "वापसी पर स्वागत है, {firstName}।",
+  "availability": "आज रात {city} में: {count} साथी उपलब्ध हैं। निजी तौर पर देखें और अपनी गति तय करें।",
+  "browseCity": "{city} देखें",
+  "upgrade": "PRISM में अपग्रेड करें",
+  "recommended": "आपके लिए सुझाव",
+  "available": "आज रात उपलब्ध।"
+}

@@ -2,11 +2,11 @@ import Database from "better-sqlite3";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 
-export type Member = { id: number; name: string; contact: string; city: string; profileImages: string[]; kitPurchased: boolean; boostCredits: number; boostExpiresAt: string | null; createdAt: string };
+export type Member = { id: number; name: string; username: string; contact: string; city: string; bio: string; profileVisibility: "private" | "members"; emailUpdates: boolean; profileImages: string[]; kitPurchased: boolean; boostCredits: number; boostExpiresAt: string | null; createdAt: string };
 export type PaymentPurpose = "joining" | "kit" | `boost_${number}`;
-type PendingPayment = { orderId: string; name: string; contact: string; city: string; amount: number; purpose: PaymentPurpose; status: string };
+type PendingPayment = { orderId: string; name: string; username: string | null; contact: string; city: string; amount: number; purpose: PaymentPurpose; status: string; authUserId: string | null; paymentId: string | null };
 
-// Vercel Functions can only write to /tmp. This keeps the POC APIs functional
+// Vercel Functions can only write to /tmp. This keeps the temporary APIs functional
 // after deployment; use Supabase or another managed database for durable data.
 const dbPath = process.env.SQLITE_DB_PATH || (process.env.VERCEL ? path.join("/tmp", "gigolo-india.db") : path.join(process.cwd(), "data", "gigolo-india.db"));
 const globalForDb = globalThis as unknown as { gigoloDb?: Database.Database };
@@ -25,6 +25,19 @@ function ensureMemberColumns(db: Database.Database) {
   if (!memberColumns.some((column) => column.name === "profile_images")) {
     db.exec("ALTER TABLE members ADD COLUMN profile_images TEXT NOT NULL DEFAULT '[]'");
   }
+  if (!memberColumns.some((column) => column.name === "bio")) {
+    db.exec("ALTER TABLE members ADD COLUMN bio TEXT NOT NULL DEFAULT ''");
+  }
+  if (!memberColumns.some((column) => column.name === "profile_visibility")) {
+    db.exec("ALTER TABLE members ADD COLUMN profile_visibility TEXT NOT NULL DEFAULT 'private'");
+  }
+  if (!memberColumns.some((column) => column.name === "email_updates")) {
+    db.exec("ALTER TABLE members ADD COLUMN email_updates INTEGER NOT NULL DEFAULT 1");
+  }
+  if (!memberColumns.some((column) => column.name === "username")) {
+    db.exec("ALTER TABLE members ADD COLUMN username TEXT");
+    db.exec("UPDATE members SET username = 'member' || id WHERE username IS NULL OR trim(username) = ''");
+  }
 }
 
 function createDatabase() {
@@ -35,8 +48,12 @@ function createDatabase() {
   db.exec(`CREATE TABLE IF NOT EXISTS members (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
+    username TEXT NOT NULL UNIQUE,
     contact TEXT NOT NULL UNIQUE,
     city TEXT NOT NULL,
+    bio TEXT NOT NULL DEFAULT '',
+    profile_visibility TEXT NOT NULL DEFAULT 'private',
+    email_updates INTEGER NOT NULL DEFAULT 1,
     profile_images TEXT NOT NULL DEFAULT '[]',
     kit_purchased INTEGER NOT NULL DEFAULT 0,
     boost_credits INTEGER NOT NULL DEFAULT 0,
@@ -46,12 +63,14 @@ function createDatabase() {
   db.exec(`CREATE TABLE IF NOT EXISTS payments (
     razorpay_order_id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
+    username TEXT,
     contact TEXT NOT NULL,
     city TEXT NOT NULL,
     amount INTEGER NOT NULL,
     currency TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'created',
     razorpay_payment_id TEXT UNIQUE,
+    auth_user_id TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     verified_at TEXT
   )`);
@@ -60,7 +79,15 @@ function createDatabase() {
   if (!paymentColumns.some((column) => column.name === "purpose")) {
     db.exec("ALTER TABLE payments ADD COLUMN purpose TEXT NOT NULL DEFAULT 'joining'");
   }
+  if (!paymentColumns.some((column) => column.name === "auth_user_id")) {
+    db.exec("ALTER TABLE payments ADD COLUMN auth_user_id TEXT");
+  }
+  if (!paymentColumns.some((column) => column.name === "username")) {
+    db.exec("ALTER TABLE payments ADD COLUMN username TEXT");
+  }
   db.exec("CREATE INDEX IF NOT EXISTS idx_payments_contact_status ON payments(contact, status)");
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_members_normalized_contact ON members(lower(trim(contact)))");
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_members_normalized_username ON members(lower(trim(username)))");
   db.pragma("optimize");
   return db;
 }
@@ -72,38 +99,51 @@ function getDb() {
 }
 
 export function normaliseContact(contact: string) { return contact.trim().toLowerCase(); }
+export function normaliseUsername(username: string) { return username.trim().toLowerCase(); }
 
-type MemberRow = Omit<Member, "profileImages"> & { profileImages: string | null };
+type MemberRow = Omit<Member, "profileImages" | "emailUpdates" | "profileVisibility"> & { profileImages: string | null; emailUpdates: number; profileVisibility: string };
 
-function toMember(row: MemberRow | undefined) {
+function toMember(row: MemberRow | undefined): Member | undefined {
   if (!row) return undefined;
   try {
     const profileImages = JSON.parse(row.profileImages ?? "[]");
-    return { ...row, profileImages: Array.isArray(profileImages) ? profileImages.filter((image): image is string => typeof image === "string") : [] };
+    return { ...row, profileVisibility: row.profileVisibility === "members" ? "members" : "private", emailUpdates: Boolean(row.emailUpdates), profileImages: Array.isArray(profileImages) ? profileImages.filter((image): image is string => typeof image === "string") : [] };
   } catch {
-    return { ...row, profileImages: [] };
+    return { ...row, profileVisibility: row.profileVisibility === "members" ? "members" : "private", emailUpdates: Boolean(row.emailUpdates), profileImages: [] };
   }
 }
 
-export function createMember({ name, contact, city }: Pick<Member, "name" | "contact" | "city">) {
-  const result = getDb().prepare("INSERT INTO members (name, contact, city) VALUES (?, ?, ?)").run(name.trim(), normaliseContact(contact), city.trim());
+export function createMember({ name, username, contact, city }: Pick<Member, "name" | "username" | "contact" | "city">) {
+  const result = getDb().prepare("INSERT INTO members (name, username, contact, city) VALUES (?, ?, ?, ?)").run(name.trim(), username.trim(), normaliseContact(contact), city.trim());
   const member = getMemberById(Number(result.lastInsertRowid));
   if (!member) throw new Error("MEMBER_CREATION_FAILED");
   return member;
 }
 
 export function getMemberByContact(contact: string) {
-  const row = getDb().prepare("SELECT id, name, contact, city, profile_images AS profileImages, kit_purchased AS kitPurchased, boost_credits AS boostCredits, boost_expires_at AS boostExpiresAt, created_at AS createdAt FROM members WHERE contact = ?").get(normaliseContact(contact)) as MemberRow | undefined;
+  const row = getDb().prepare("SELECT id, name, username, contact, city, bio, profile_visibility AS profileVisibility, email_updates AS emailUpdates, profile_images AS profileImages, kit_purchased AS kitPurchased, boost_credits AS boostCredits, boost_expires_at AS boostExpiresAt, created_at AS createdAt FROM members WHERE contact = ?").get(normaliseContact(contact)) as MemberRow | undefined;
+  return toMember(row);
+}
+
+export function getMemberByUsername(username: string) {
+  const row = getDb().prepare("SELECT id, name, username, contact, city, bio, profile_visibility AS profileVisibility, email_updates AS emailUpdates, profile_images AS profileImages, kit_purchased AS kitPurchased, boost_credits AS boostCredits, boost_expires_at AS boostExpiresAt, created_at AS createdAt FROM members WHERE lower(trim(username)) = ?").get(normaliseUsername(username)) as MemberRow | undefined;
   return toMember(row);
 }
 
 export function getMemberById(id: number) {
-  const row = getDb().prepare("SELECT id, name, contact, city, profile_images AS profileImages, kit_purchased AS kitPurchased, boost_credits AS boostCredits, boost_expires_at AS boostExpiresAt, created_at AS createdAt FROM members WHERE id = ?").get(id) as MemberRow | undefined;
+  const row = getDb().prepare("SELECT id, name, username, contact, city, bio, profile_visibility AS profileVisibility, email_updates AS emailUpdates, profile_images AS profileImages, kit_purchased AS kitPurchased, boost_credits AS boostCredits, boost_expires_at AS boostExpiresAt, created_at AS createdAt FROM members WHERE id = ?").get(id) as MemberRow | undefined;
   return toMember(row);
 }
 
 export function setMemberProfileImages(id: number, profileImages: string[]) {
   getDb().prepare("UPDATE members SET profile_images = ? WHERE id = ?").run(JSON.stringify(profileImages), id);
+  const member = getMemberById(id);
+  if (!member) throw new Error("MEMBER_NOT_FOUND");
+  return member;
+}
+
+export function updateMemberProfile(id: number, { name, city, bio, profileVisibility, emailUpdates }: Pick<Member, "name" | "city" | "bio" | "profileVisibility" | "emailUpdates">) {
+  getDb().prepare("UPDATE members SET name = ?, city = ?, bio = ?, profile_visibility = ?, email_updates = ? WHERE id = ?").run(name.trim(), city.trim(), bio.trim(), profileVisibility, Number(emailUpdates), id);
   const member = getMemberById(id);
   if (!member) throw new Error("MEMBER_NOT_FOUND");
   return member;
@@ -129,18 +169,30 @@ export function getRecentSignupEvents(afterId: number) {
   return getDb().prepare("SELECT id, created_at AS createdAt FROM members WHERE id > ? ORDER BY id ASC LIMIT 10").all(afterId) as Array<{ id: number; createdAt: string }>;
 }
 
-export function createPendingPayment({ orderId, name, contact, city, amount, purpose }: Omit<PendingPayment, "status">) {
-  getDb().prepare("INSERT INTO payments (razorpay_order_id, name, contact, city, amount, currency, purpose) VALUES (?, ?, ?, ?, ?, ?, ?)").run(orderId, name.trim(), normaliseContact(contact), city.trim(), amount, "INR", purpose);
+export function createPendingPayment({ orderId, name, username, contact, city, amount, purpose }: Omit<PendingPayment, "status" | "authUserId" | "paymentId">) {
+  getDb().prepare("INSERT INTO payments (razorpay_order_id, name, username, contact, city, amount, currency, purpose) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").run(orderId, name.trim(), username?.trim() || null, normaliseContact(contact), city.trim(), amount, "INR", purpose);
 }
 
 export function getPendingPayment(orderId: string) {
-  return getDb().prepare("SELECT razorpay_order_id AS orderId, name, contact, city, amount, purpose, status FROM payments WHERE razorpay_order_id = ?").get(orderId) as PendingPayment | undefined;
+  return getDb().prepare("SELECT razorpay_order_id AS orderId, name, username, contact, city, amount, purpose, status, auth_user_id AS authUserId, razorpay_payment_id AS paymentId FROM payments WHERE razorpay_order_id = ?").get(orderId) as PendingPayment | undefined;
+}
+
+export function linkPaymentToAuthUser(orderId: string, authUserId: string) {
+  getDb().prepare("UPDATE payments SET auth_user_id = ? WHERE razorpay_order_id = ?").run(authUserId, orderId);
+}
+
+export function hasPaidOrder(contact: string) {
+  return Boolean(getDb().prepare("SELECT 1 FROM payments WHERE contact = ? AND status = 'verified' LIMIT 1").get(normaliseContact(contact)));
+}
+
+export function getPaidOrdersWithoutAuthUser(limit = 100) {
+  return getDb().prepare("SELECT razorpay_order_id AS orderId, name, username, contact, city, amount, purpose, status, auth_user_id AS authUserId, razorpay_payment_id AS paymentId FROM payments WHERE status = 'verified' AND (auth_user_id IS NULL OR auth_user_id = '') ORDER BY verified_at ASC LIMIT ?").all(limit) as PendingPayment[];
 }
 
 export function finalisePayment({ orderId, paymentId }: { orderId: string; paymentId: string }) {
   const database = getDb();
   const complete = database.transaction(() => {
-    const payment = database.prepare("SELECT razorpay_order_id AS orderId, name, contact, city, amount, purpose, status FROM payments WHERE razorpay_order_id = ?").get(orderId) as PendingPayment | undefined;
+    const payment = database.prepare("SELECT razorpay_order_id AS orderId, name, username, contact, city, amount, purpose, status, auth_user_id AS authUserId, razorpay_payment_id AS paymentId FROM payments WHERE razorpay_order_id = ?").get(orderId) as PendingPayment | undefined;
     if (!payment) throw new Error("PAYMENT_NOT_FOUND");
     if (payment.status === "verified") {
       const existingMember = getMemberByContact(payment.contact);
@@ -166,7 +218,7 @@ export function finalisePayment({ orderId, paymentId }: { orderId: string; payme
       if (!boostedMember) throw new Error("BOOST_MEMBER_NOT_FOUND");
       return boostedMember;
     }
-    const member = createMember({ name: payment.name, contact: payment.contact, city: payment.city });
+    const member = createMember({ name: payment.name, username: payment.username || `member${Date.now()}`, contact: payment.contact, city: payment.city });
     database.prepare("UPDATE payments SET status = 'verified', razorpay_payment_id = ?, verified_at = CURRENT_TIMESTAMP WHERE razorpay_order_id = ?").run(paymentId, orderId);
     return member;
   });

@@ -7,9 +7,11 @@ export const runtime = "nodejs";
 export async function GET(request: NextRequest) {
   const loginUrl = new URL("/login?error=magic-link", request.url);
   const code = request.nextUrl.searchParams.get("code");
+  const next = request.nextUrl.searchParams.get("next");
+  const destination = next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
   if (!code) return NextResponse.redirect(loginUrl);
 
-  const response = NextResponse.redirect(new URL("/", request.url));
+  const response = NextResponse.redirect(new URL(destination, request.url));
   try {
     const supabase = createSupabaseRouteClient(request, response);
     const result = await supabase.auth.exchangeCodeForSession(code);

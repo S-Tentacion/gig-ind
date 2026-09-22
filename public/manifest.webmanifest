@@ -1,0 +1,12 @@
+{
+  "name": "Gigolo India",
+  "short_name": "Gigolo India",
+  "description": "A private, adults-only companion membership platform.",
+  "start_url": "/en",
+  "display": "standalone",
+  "background_color": "#0d0918",
+  "theme_color": "#0d0918",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

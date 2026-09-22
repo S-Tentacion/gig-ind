@@ -2,9 +2,9 @@
 
 Gigolo India is a Next.js proof of concept for a privacy-focused, adult-only companion-discovery interface. It uses a local SQLite database for accounts and Razorpay Standard Checkout in **test mode** for the joining-fee flow.
 
-## Supabase passwordless authentication
+## Supabase authentication
 
-Sign-up and sign-in are handled by Supabase Auth with an email or SMS verification code—there are no passwords and no OAuth providers in this POC.
+Sign-up is completed only after payment verification. The chosen password is sent directly to Supabase Auth and is never written to the application tables. Members then sign in with email and password.
 
 1. Create a Supabase project and copy its Project URL and publishable key from **Project Settings → API**.
 2. Add these values to `.env.local`:
@@ -12,11 +12,12 @@ Sign-up and sign-in are handled by Supabase Auth with an email or SMS verificati
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ```
 
-3. In Supabase Auth, enable Email and/or Phone. Configure your email template to include the OTP token, and configure an SMS provider before testing phone delivery.
+3. In **Authentication → Providers → Email**, enable email/password sign-in. Email confirmation can be disabled for the payment-confirmed password flow, since the server creates the account only after a verified payment.
 
-After Razorpay test checkout creates the local POC membership, `/api/auth/signup` sends email members a Supabase magic link and sends phone members an SMS verification code. The email link opens `/auth/callback`, where its one-time code is exchanged for a Supabase session and the member is redirected to the homepage with their profile visible in the navbar. `/api/auth/login` sends a code for an existing account and `/api/auth/verify` validates it and creates the secure app session. Add `https://your-domain/auth/callback` (and `http://localhost:3000/auth/callback` locally) to Supabase Auth’s allowed redirect URLs. The implementation follows Supabase’s documented [auth-code session exchange](https://supabase.com/docs/reference/javascript/auth-exchangecodeforsession) and [OTP verification](https://supabase.com/docs/guides/auth/phone-login) flows.
+The application uses Supabase Auth’s server-verified email/password sign-in. The server stores only the short-lived app session cookies and private profile/payment data; it never stores a plaintext password, token, or payment credential.
 
 ## Run locally
 
@@ -26,7 +27,29 @@ copy .env.example .env.local
 npm run dev
 ```
 
+## Environment variables
+
+Copy [`.env.example`](.env.example) to `.env.local` for local development. In Vercel, set the same values in **Project → Settings → Environment Variables**.
+
+- `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — Supabase **Project Settings → API**; browser-safe.
+- `SUPABASE_SERVICE_ROLE_KEY` — Supabase **Project Settings → API**; server-only and required for private profiles, payments, companion listings, and messaging.
+- `NEXT_PUBLIC_RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` — Razorpay **Account & Settings → API Keys**; the secret is server-only.
+- `RAZORPAY_WEBHOOK_SECRET` — choose it when creating the Razorpay webhook; server-only.
+- `CRON_SECRET` — create a 32-byte random value yourself for Vercel Cron authorization; server-only.
+- `NEXT_PUBLIC_SITE_URL` — your final site URL, e.g. `https://gig-ind.vercel.app`.
+
 ## Razorpay test configuration
+
+## Supabase payment and account data
+
+Run every SQL file in [`supabase/migrations/`](supabase/migrations) in filename order in the Supabase SQL Editor before using payment flows in this version. It creates private tables for:
+
+- `member_profiles` — the private application user table, with safe signup/profile data (legal first name, username, email, city, preferences, and image references), sign-in readiness, membership level, Kit status, and Boost balance. Passwords remain only in Supabase Auth.
+- `payment_transactions` — every created, verified, failed, or refunded payment order, categorized as `signup`, `kit`, or `boost`.
+- `kit_orders` — the current Kit delivery status and destination city.
+- `boost_credit_ledger` — purchased and used Boost credits.
+
+The server records a Razorpay order before Checkout opens, then updates it only after server-side signature verification or a verified webhook. Add `SUPABASE_SERVICE_ROLE_KEY` to local and deployed server environment variables; never expose that key to the browser.
 
 1. In the Razorpay Dashboard, enable **Test Mode**.
 2. Generate an API key pair from **Account & Settings → API Keys**.
@@ -47,7 +70,7 @@ Registration requires 3–5 profile photos before the checkout button can be use
 
 ## Member and premium POC flow
 
-1. A member signs in using the email address or phone number stored at registration. The POC sets a local, HTTP-only session cookie.
+1. A member signs in with the email address and password chosen during paid registration. Supabase Auth verifies the password and the app writes HTTP-only session cookies.
 2. A signed-in standard member sees their name, city, and plan in the profile popover, plus an animated Gigolo Kit banner and marquee.
 3. The Kit CTA opens `/buy`, which creates a separate Razorpay **test-mode** ₹10,000 order for the signed-in account.
 4. After server-side signature verification, the app saves `kit_purchased` for that member and changes their home into the colorful **PRISM** premium experience with its own logo treatment.
@@ -62,7 +85,7 @@ The homepage includes a **classroom activity simulation** every 15 seconds to de
 ## Important POC limitations
 
 - Razorpay is configured for test mode only; no real money is collected.
-- Sign-in requires a Supabase verification code. Configure email/SMS delivery in your Supabase project before testing it.
+- Sign-in uses Supabase email/password authentication. Enable the Email provider in your Supabase project before testing it.
 - SQLite is local to the running project. Use managed storage and proper session security before deployment.
-- The session cookie stores only a local POC member ID; production authentication must use signed, rotating sessions and OTP or password verification.
+- The session cookies contain Supabase session tokens with secure, HTTP-only cookie options in production. The legacy SQLite data remains a local cache; Supabase migrations must be applied for durable member, payment, companion, and messaging data.
 - The product is strictly for adults aged 18 and over.

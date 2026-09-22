@@ -8,7 +8,7 @@ export async function GET() {
     const member = await getCurrentMember();
 
     if (!member) return NextResponse.json({ member: null });
-    return NextResponse.json({ member: { id: member.id, name: member.name, city: member.city, kitPurchased: member.kitPurchased, profileImages: member.profileImages } });
+    return NextResponse.json({ member: { id: member.id, name: member.username, city: member.city, kitPurchased: member.kitPurchased, profileImages: member.profileImages } });
   } catch {
     return NextResponse.json({ member: null });
   }

@@ -9,7 +9,7 @@ export function GET(request: Request) {
   try {
     return NextResponse.json({ events: getRecentSignupEvents(after) });
   } catch {
-    // Activity toasts are optional UI. Never let an unavailable POC store break the homepage.
+    // Activity toasts are optional UI. Never let an unavailable store break the homepage.
     return NextResponse.json({ events: [] });
   }
 }
