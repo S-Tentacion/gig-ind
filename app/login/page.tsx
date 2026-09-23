@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, LoaderCircle, LockKeyhole } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useSessionMember } from "@/components/member-menu";
+import { TelegramLoginButton } from "@/components/telegram-login-button";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,6 +19,13 @@ export default function LoginPage() {
   useEffect(() => {
     if (sessionLoaded && member) router.replace("/");
   }, [member, router, sessionLoaded]);
+
+  useEffect(() => {
+    const state = new URLSearchParams(window.location.search).get("telegram");
+    if (state === "unlinked") setError("This Telegram account is not linked to a paid membership. Sign in with email first, then link Telegram from your profile.");
+    else if (state === "invalid") setError("Telegram could not verify this sign-in. Please try again.");
+    else if (state === "failed") setError("Telegram sign-in could not be completed. Please use email or try again.");
+  }, []);
 
   async function signIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -73,6 +81,9 @@ export default function LoginPage() {
             {loading ? <><LoaderCircle className="animate-spin" size={16} /> Signing in…</> : <>Sign In <ArrowRight size={16} /></>}
           </Button>
         </form>
+        <div className="my-6 flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[.16em] text-mauve-400"><span className="h-px flex-1 bg-mauve-200 dark:bg-mauve-700" />or continue with<span className="h-px flex-1 bg-mauve-200 dark:bg-mauve-700" /></div>
+        <div className="flex justify-center"><TelegramLoginButton /></div>
+        <p className="mt-3 text-center text-xs leading-5 text-mauve-500">Telegram sign-in works after your Telegram account is linked through payment or from your profile.</p>
         <div className="mt-6 flex gap-2 rounded-xl bg-mauve-100/80 p-3 text-xs leading-5 text-mauve-600 dark:bg-mauve-800/70 dark:text-mauve-300"><LockKeyhole size={15} className="mt-0.5 shrink-0 text-cyan-700 dark:text-cyan-300" />Your account is available after payment confirmation. No email sign-in links are used.</div>
         <p className="mt-7 text-center text-xs text-mauve-500">New here? <Link href="/register" className="font-semibold text-cyan-700 hover:underline dark:text-cyan-200">Request access</Link></p>
       </div>

@@ -2,17 +2,13 @@ import { NextResponse } from "next/server";
 import { createPendingPayment, getMemberByContact, getMemberByUsername, type PaymentPurpose } from "@/lib/db";
 import { getCurrentMember } from "@/lib/current-member";
 import { recordPaymentOrder } from "@/lib/supabase-payment-ledger";
+import { randomBytes, randomUUID } from "node:crypto";
+import { checkoutSecretHash, createTelegramInvoice, paymentStars } from "@/lib/telegram-payments";
 
 export const runtime = "nodejs";
 
-const JOINING_AMOUNT = 150000;
-const KIT_AMOUNT = 1000000;
-const BOOST_CREDIT_AMOUNT = 100000;
-
 export async function POST(request: Request) {
-  const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-  const keySecret = process.env.RAZORPAY_KEY_SECRET;
-  if (!keyId || !keySecret) return NextResponse.json({ error: "Razorpay test keys are not configured yet. Add them to .env.local." }, { status: 503 });
+  if (!process.env.TELEGRAM_BOT_TOKEN) return NextResponse.json({ error: "Telegram payments are not configured yet." }, { status: 503 });
 
   const body = await request.json() as { kind?: string; name?: string; username?: string; contact?: string; city?: string; boostPack?: number };
   let purpose: PaymentPurpose = body.kind === "kit" ? "kit" : "joining";
@@ -25,7 +21,7 @@ export async function POST(request: Request) {
   let username = typeof body.username === "string" ? body.username.trim() : "";
   let contact = typeof body.contact === "string" ? body.contact.trim() : "";
   let city = typeof body.city === "string" ? body.city.trim() : "";
-  const amount = purpose === "kit" ? KIT_AMOUNT : purpose.startsWith("boost_") ? Number(purpose.replace("boost_", "")) * BOOST_CREDIT_AMOUNT : JOINING_AMOUNT;
+  const amount = paymentStars(purpose);
 
   if (purpose === "kit" || purpose.startsWith("boost_")) {
     const member = await getCurrentMember();
@@ -42,17 +38,16 @@ export async function POST(request: Request) {
     if (getMemberByContact(contact)) return NextResponse.json({ error: "An account with this email or phone number already exists. Please sign in." }, { status: 409 });
   }
 
-  const receipt = `${purpose}_${Date.now()}`;
-  const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
-  const razorpayResponse = await fetch("https://api.razorpay.com/v1/orders", { method: "POST", headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/json" }, body: JSON.stringify({ amount, currency: "INR", receipt, notes: { purpose: `gigolo_india_${purpose}` } }), cache: "no-store" });
-  if (!razorpayResponse.ok) return NextResponse.json({ error: "Razorpay could not create a test order. Check your test keys." }, { status: 502 });
-  const order = await razorpayResponse.json() as { id: string; amount: number; currency: string };
+  const orderId = `tg_${randomUUID()}`;
+  const checkoutSecret = randomBytes(32).toString("base64url");
 
   try {
-    createPendingPayment({ orderId: order.id, name, username: purpose === "joining" ? username : null, contact, city, amount, purpose });
-    await recordPaymentOrder({ orderId: order.id, name, username: purpose === "joining" ? username : null, contact, city, amount, purpose });
-  } catch {
+    createPendingPayment({ orderId, name, username: purpose === "joining" ? username : null, contact, city, amount, currency: "XTR", purpose, checkoutSecretHash: checkoutSecretHash(checkoutSecret) });
+    await recordPaymentOrder({ orderId, name, username: purpose === "joining" ? username : null, contact, city, amount, currency: "XTR", purpose });
+    const invoiceUrl = await createTelegramInvoice({ orderId, purpose, amount });
+    return NextResponse.json({ orderId, amount, currency: "XTR", invoiceUrl, checkoutSecret, purpose });
+  } catch (error) {
+    console.error("Telegram invoice creation failed", error);
     return NextResponse.json({ error: "We could not prepare your secure payment record. Please try again in a moment." }, { status: 503 });
   }
-  return NextResponse.json({ orderId: order.id, amount: order.amount, currency: order.currency, keyId, purpose });
 }

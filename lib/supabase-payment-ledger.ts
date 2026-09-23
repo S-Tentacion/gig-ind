@@ -9,6 +9,7 @@ type PaymentRecord = {
   contact: string;
   city: string;
   amount: number;
+  currency?: string;
   purpose: PaymentPurpose;
 };
 
@@ -34,7 +35,7 @@ function purchasedBoostCredits(purpose: PaymentPurpose) {
 
 function paymentRow(payment: PaymentRecord) {
   return {
-    provider: "razorpay",
+    provider: payment.currency === "XTR" ? "telegram" : "razorpay",
     provider_order_id: payment.orderId,
     member_contact: normaliseContact(payment.contact),
     member_username: payment.username?.trim() || null,
@@ -43,7 +44,7 @@ function paymentRow(payment: PaymentRecord) {
     purpose: paymentPurpose(payment.purpose),
     boost_credits: purchasedBoostCredits(payment.purpose),
     amount_paise: payment.amount,
-    currency: "INR",
+    currency: payment.currency || "INR",
   };
 }
 
@@ -96,7 +97,13 @@ export async function syncMemberProfile({ member, authUserId }: { member: Member
   if (error) throw ledgerError("SUPABASE_MEMBER_PROFILE_SYNC_FAILED");
 }
 
-/** Saves a Razorpay order before Checkout is opened. No card data or passwords are stored. */
+export async function linkTelegramMemberProfile({ authUserId, telegramUserId, telegramUsername }: { authUserId: string; telegramUserId: string; telegramUsername?: string }) {
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.from("member_profiles").update({ telegram_user_id: telegramUserId, telegram_username: telegramUsername?.trim() || null }).eq("id", authUserId);
+  if (error) throw ledgerError("SUPABASE_TELEGRAM_LINK_FAILED");
+}
+
+/** Saves a provider order before checkout is opened. No payment credentials or passwords are stored. */
 export async function recordPaymentOrder(payment: PaymentRecord) {
   const admin = createSupabaseAdminClient();
   const { error } = await admin.from("payment_transactions").upsert(
@@ -108,8 +115,7 @@ export async function recordPaymentOrder(payment: PaymentRecord) {
 
 /**
  * Records a verified payment and the member state it grants. Each table has a
- * provider/order unique constraint, so a browser verification and Razorpay
- * webhook can safely arrive more than once.
+ * provider/order unique constraint, so duplicate provider webhooks are safe.
  */
 export async function recordVerifiedPayment({ payment, member, authUserId, signInStatus }: VerifiedPaymentInput) {
   const admin = createSupabaseAdminClient();

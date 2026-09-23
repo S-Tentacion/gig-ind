@@ -5,9 +5,10 @@ import { BadgeCheck, Check, Clock3, LoaderCircle, Minus, Plus, Rocket, Sparkles,
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { ConfettiBurst } from "@/components/confetti-burst";
+import { createTelegramOrder, openTelegramWindow, waitForTelegramPayment } from "@/lib/telegram-checkout-client";
 
 const oneHour = 60 * 60 * 1000;
-const creditPrice = 1000;
+const creditPrice = 875;
 
 function timeRemaining(expiresAt: string | null) {
   if (!expiresAt) return 0;
@@ -105,57 +106,21 @@ export function PrismBoostPanel() {
     }
   };
 
-  const loadCheckout = () => new Promise<boolean>((resolve) => {
-    if (window.Razorpay) return resolve(true);
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-
   const buyCredits = async () => {
     setProcessingPurchase(true);
     setMessage("");
+    const popup = openTelegramWindow();
     try {
-      if (!await loadCheckout()) throw new Error("We could not load the checkout window. Please try again.");
-      const orderResponse = await fetch("/api/payments/order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: "boost", boostPack: selectedCredits }),
-      });
-      const order = await orderResponse.json() as { keyId?: string; amount?: number; currency?: string; orderId?: string; error?: string };
-      if (!orderResponse.ok || !order.keyId || !order.amount || !order.currency || !order.orderId) throw new Error(order.error ?? "We could not start checkout.");
-      if (!window.Razorpay) throw new Error("Checkout is unavailable. Please try again.");
-      const Checkout = window.Razorpay as unknown as new (options: Record<string, unknown>) => { open: () => void };
       const purchasedCredits = selectedCredits;
-      const checkout = new Checkout({
-        key: order.keyId,
-        amount: order.amount,
-        currency: order.currency,
-        name: "Gigolo India",
-        description: `Profile Boost · ${purchasedCredits} ${purchasedCredits === 1 ? "credit" : "credits"}`,
-        order_id: order.orderId,
-        theme: { color: "#675d70" },
-        handler: async (response: Record<string, string>) => {
-          const verifyResponse = await fetch("/api/payments/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(response) });
-          const verified = await verifyResponse.json() as { member?: { boostCredits?: number }; error?: string };
-          if (!verifyResponse.ok) {
-            setMessage(verified.error ?? "Verification failed. Please try again.");
-            setProcessingPurchase(false);
-            return;
-          }
-          setCredits(verified.member?.boostCredits ?? credits + purchasedCredits);
-          setPurchaseSuccess(true);
-          setCelebrate(true);
-          window.setTimeout(() => setCelebrate(false), 1700);
-          setProcessingPurchase(false);
-        },
-        modal: { ondismiss: () => setProcessingPurchase(false) },
-      });
-      checkout.open();
+      const order = await createTelegramOrder({ kind: "boost", boostPack: selectedCredits }, popup);
+      await waitForTelegramPayment(order);
+      setCredits(credits + purchasedCredits);
+      setPurchaseSuccess(true);
+      setCelebrate(true);
+      window.setTimeout(() => setCelebrate(false), 1700);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+    } finally {
       setProcessingPurchase(false);
     }
   };
@@ -205,12 +170,12 @@ export function PrismBoostPanel() {
     {portalReady ? createPortal(<AnimatePresence>{purchaseOpen && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[500] grid place-items-center bg-[#090511]/80 px-4 py-6 backdrop-blur-md" role="dialog" aria-modal="true" aria-labelledby="boost-purchase-title" onMouseDown={(event) => { if (event.target === event.currentTarget && !processingPurchase) setPurchaseOpen(false); }}><motion.div initial={{ opacity: 0, y: 24, scale: .97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 16, scale: .98 }} transition={{ duration: .25, ease: [0.22, 1, .36, 1] }} className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-white/15 bg-[#171024] p-6 shadow-[0_30px_100px_rgba(0,0,0,.65)] sm:p-7">
       <div className="pointer-events-none absolute -left-16 top-0 h-48 w-48 rounded-full bg-fuchsia-500/20 blur-3xl"/><div className="pointer-events-none absolute -right-16 bottom-0 h-48 w-48 rounded-full bg-cyan-400/15 blur-3xl"/>
       {!purchaseSuccess ? <div className="relative"><div className="flex items-start justify-between gap-4"><div><p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.2em] text-cyan-100"><Zap size={14}/> Profile Boost</p><h2 id="boost-purchase-title" className="mt-3 font-serif text-3xl tracking-[-.05em]">Choose your hours.</h2></div><button type="button" aria-label="Close purchase dialog" disabled={processingPurchase} onClick={() => setPurchaseOpen(false)} className="grid h-9 w-9 place-items-center rounded-full border border-white/12 text-violet-100/65 transition hover:border-white/30 hover:text-white disabled:opacity-40"><X size={17}/></button></div>
-        <p className="mt-3 text-xs leading-5 text-violet-100/65">Each credit gives you one hour of PRISM Boost. Select from ₹1,000 up to ₹10,000.</p>
-        <div className="mt-7 rounded-3xl border border-white/10 bg-white/[.045] p-5"><div className="flex items-end justify-between gap-4"><div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-violet-100/45">Your selection</p><p className="mt-1 font-serif text-5xl tracking-[-.07em]">₹{(selectedCredits * creditPrice).toLocaleString("en-IN")}</p></div><span className="rounded-2xl border border-cyan-200/25 bg-cyan-200/10 px-3 py-2 text-right"><strong className="block text-lg text-cyan-100">{selectedCredits}</strong><span className="block text-[9px] font-bold uppercase tracking-[.13em] text-cyan-100/75">{selectedCredits === 1 ? "credit" : "credits"}</span></span></div>
+        <p className="mt-3 text-xs leading-5 text-violet-100/65">Each credit gives you one hour of PRISM Boost. Pay securely with Telegram Stars.</p>
+        <div className="mt-7 rounded-3xl border border-white/10 bg-white/[.045] p-5"><div className="flex items-end justify-between gap-4"><div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-violet-100/45">Your selection</p><p className="mt-1 font-serif text-5xl tracking-[-.07em]">⭐ {(selectedCredits * creditPrice).toLocaleString("en-IN")}</p></div><span className="rounded-2xl border border-cyan-200/25 bg-cyan-200/10 px-3 py-2 text-right"><strong className="block text-lg text-cyan-100">{selectedCredits}</strong><span className="block text-[9px] font-bold uppercase tracking-[.13em] text-cyan-100/75">{selectedCredits === 1 ? "credit" : "credits"}</span></span></div>
           <input aria-label="Number of Boost credits" type="range" min="1" max="10" step="1" value={selectedCredits} onChange={(event) => setSelectedCredits(Number(event.target.value))} className="mt-7 h-2 w-full cursor-pointer appearance-none rounded-full bg-white/15 accent-cyan-200"/>
-          <div className="mt-3 flex justify-between text-[10px] font-bold tracking-[.1em] text-violet-100/40"><span>₹1,000</span><span>₹10,000</span></div>
+          <div className="mt-3 flex justify-between text-[10px] font-bold tracking-[.1em] text-violet-100/40"><span>⭐ 875</span><span>⭐ 8,750</span></div>
           <div className="mt-5 flex items-center justify-between rounded-2xl border border-white/10 bg-[#120d22]/70 px-3 py-2.5"><button type="button" aria-label="Remove a credit" onClick={() => setSelectedCredits((current) => Math.max(1, current - 1))} disabled={selectedCredits === 1} className="grid h-8 w-8 place-items-center rounded-full border border-white/15 text-violet-100 transition hover:border-cyan-200 hover:text-cyan-100 disabled:opacity-30"><Minus size={15}/></button><span className="text-xs font-semibold text-violet-100">{selectedCredits} {selectedCredits === 1 ? "hour" : "hours"} of Boost</span><button type="button" aria-label="Add a credit" onClick={() => setSelectedCredits((current) => Math.min(10, current + 1))} disabled={selectedCredits === 10} className="grid h-8 w-8 place-items-center rounded-full border border-white/15 text-violet-100 transition hover:border-cyan-200 hover:text-cyan-100 disabled:opacity-30"><Plus size={15}/></button></div>
         </div>
-        <button type="button" disabled={processingPurchase} onClick={buyCredits} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-fuchsia-300 via-amber-200 to-cyan-200 px-5 py-3.5 text-sm font-bold text-mauve-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60">{processingPurchase ? <LoaderCircle size={17} className="animate-spin"/> : <Zap size={17}/>} {processingPurchase ? "Opening secure checkout…" : `Continue · ₹${(selectedCredits * creditPrice).toLocaleString("en-IN")}`}</button><p className="mt-4 text-center text-[10px] leading-4 text-violet-100/45">Your selected Boost credits are added after payment is verified.</p></div> : <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="relative py-3 text-center"><div className="mx-auto grid h-20 w-20 place-items-center rounded-full border border-cyan-200/35 bg-cyan-200/10 text-cyan-100 shadow-[0_0_40px_rgba(103,232,249,.2)]"><Check size={34}/></div><p className="mt-6 text-[10px] font-bold uppercase tracking-[.22em] text-cyan-100">Credits secured</p><h2 id="boost-purchase-title" className="mt-3 font-serif text-4xl tracking-[-.06em]">Ready when you are.</h2><p className="mx-auto mt-3 max-w-xs text-xs leading-5 text-violet-100/65">{selectedCredits} {selectedCredits === 1 ? "Boost credit is" : "Boost credits are"} now available. Start one hour of visual PRISM Boost now, or keep your credits for later.</p><div className="mt-7 grid gap-3"><button type="button" disabled={activating} onClick={startPurchasedBoost} className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-fuchsia-300 via-amber-200 to-cyan-200 px-5 py-3.5 text-sm font-bold text-mauve-950 transition hover:brightness-110 disabled:opacity-60">{activating ? <LoaderCircle size={17} className="animate-spin"/> : <Rocket size={17}/>} {activating ? "Starting…" : "Start the Boost"}</button><button type="button" onClick={() => setPurchaseOpen(false)} className="text-xs font-semibold text-violet-100/60 transition hover:text-white">Keep credits for later</button></div><p className="mt-5 text-[10px] text-violet-100/40">Available credits: {credits}</p></motion.div>}</motion.div></motion.div>}</AnimatePresence>, document.body) : null}
+        <button type="button" disabled={processingPurchase} onClick={buyCredits} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-fuchsia-300 via-amber-200 to-cyan-200 px-5 py-3.5 text-sm font-bold text-mauve-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60">{processingPurchase ? <LoaderCircle size={17} className="animate-spin"/> : <Zap size={17}/>} {processingPurchase ? "Waiting for Telegram…" : `Pay ⭐ ${(selectedCredits * creditPrice).toLocaleString("en-IN")} in Telegram`}</button><p className="mt-4 text-center text-[10px] leading-4 text-violet-100/45">Your selected Boost credits are added after Telegram verifies payment.</p></div> : <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="relative py-3 text-center"><div className="mx-auto grid h-20 w-20 place-items-center rounded-full border border-cyan-200/35 bg-cyan-200/10 text-cyan-100 shadow-[0_0_40px_rgba(103,232,249,.2)]"><Check size={34}/></div><p className="mt-6 text-[10px] font-bold uppercase tracking-[.22em] text-cyan-100">Credits secured</p><h2 id="boost-purchase-title" className="mt-3 font-serif text-4xl tracking-[-.06em]">Ready when you are.</h2><p className="mx-auto mt-3 max-w-xs text-xs leading-5 text-violet-100/65">{selectedCredits} {selectedCredits === 1 ? "Boost credit is" : "Boost credits are"} now available. Start one hour of visual PRISM Boost now, or keep your credits for later.</p><div className="mt-7 grid gap-3"><button type="button" disabled={activating} onClick={startPurchasedBoost} className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-fuchsia-300 via-amber-200 to-cyan-200 px-5 py-3.5 text-sm font-bold text-mauve-950 transition hover:brightness-110 disabled:opacity-60">{activating ? <LoaderCircle size={17} className="animate-spin"/> : <Rocket size={17}/>} {activating ? "Starting…" : "Start the Boost"}</button><button type="button" onClick={() => setPurchaseOpen(false)} className="text-xs font-semibold text-violet-100/60 transition hover:text-white">Keep credits for later</button></div><p className="mt-5 text-[10px] text-violet-100/40">Available credits: {credits}</p></motion.div>}</motion.div></motion.div>}</AnimatePresence>, document.body) : null}
   </aside>;
 }

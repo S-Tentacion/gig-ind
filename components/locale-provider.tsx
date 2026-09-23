@@ -134,7 +134,7 @@ export function useTranslation() {
 export function LanguageSwitcher({ className = "" }: { className?: string }) {
   const { locale, setLocale, t } = useTranslation();
   const nextLocale = locale === "en" ? "hi" : "en";
-  return <button type="button" onClick={() => setLocale(nextLocale)} aria-label={t("common", "languageLabel")} className={`inline-flex items-center gap-1.5 rounded-full border border-cyan-200/30 bg-cyan-200/10 px-3 py-2 text-xs font-bold text-cyan-100 transition hover:bg-cyan-200 hover:text-mauve-950 ${className}`}><Languages size={14} />{t("common", "language")}</button>;
+  return <button type="button" data-no-translate onClick={() => setLocale(nextLocale)} aria-label={t("common", "languageLabel")} className={`inline-flex items-center gap-1.5 rounded-full border border-cyan-200/30 bg-cyan-200/10 px-3 py-2 text-xs font-bold text-cyan-100 transition hover:bg-cyan-200 hover:text-mauve-950 ${className}`}><Languages size={14} />{t("common", "language")}</button>;
 }
 
 export function LanguageToggle() {

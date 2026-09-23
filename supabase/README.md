@@ -2,6 +2,8 @@
 
 Run every file in `migrations/` in filename order once in the Supabase SQL Editor before deploying this version.
 
+The Telegram Stars migration is `20260923000006_telegram_stars_payments.sql`. After deployment, register the public HTTPS webhook with `npm run telegram:webhook -- https://your-domain.example`.
+
 It creates private tables for member profiles, sign-in readiness, payment history, Kit delivery status, Boost credit history, member-to-client conversations, and the companion directory. `member_profiles` is the application user table: it holds safe profile data entered during signup (legal first name, username, email, city), profile preferences, and photo references. Passwords stay exclusively in Supabase Auth (`auth.users`), and no access token, card data, or payment secret is stored here. `payment_transactions.payment_type` makes the three charge categories explicit: `signup`, `kit`, and `boost`. The app writes these tables only from server routes using `SUPABASE_SERVICE_ROLE_KEY`.
 
 ## Companion directory

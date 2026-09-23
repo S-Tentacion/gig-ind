@@ -4,7 +4,7 @@ import path from "node:path";
 
 export type Member = { id: number; name: string; username: string; contact: string; city: string; bio: string; profileVisibility: "private" | "members"; emailUpdates: boolean; profileImages: string[]; kitPurchased: boolean; boostCredits: number; boostExpiresAt: string | null; createdAt: string };
 export type PaymentPurpose = "joining" | "kit" | `boost_${number}`;
-type PendingPayment = { orderId: string; name: string; username: string | null; contact: string; city: string; amount: number; purpose: PaymentPurpose; status: string; authUserId: string | null; paymentId: string | null };
+export type PendingPayment = { orderId: string; name: string; username: string | null; contact: string; city: string; amount: number; currency: string; purpose: PaymentPurpose; status: string; authUserId: string | null; paymentId: string | null; checkoutSecretHash: string | null };
 
 // Vercel Functions can only write to /tmp. This keeps the temporary APIs functional
 // after deployment; use Supabase or another managed database for durable data.
@@ -37,6 +37,12 @@ function ensureMemberColumns(db: Database.Database) {
   if (!memberColumns.some((column) => column.name === "username")) {
     db.exec("ALTER TABLE members ADD COLUMN username TEXT");
     db.exec("UPDATE members SET username = 'member' || id WHERE username IS NULL OR trim(username) = ''");
+  }
+  if (!memberColumns.some((column) => column.name === "telegram_user_id")) {
+    db.exec("ALTER TABLE members ADD COLUMN telegram_user_id TEXT");
+  }
+  if (!memberColumns.some((column) => column.name === "telegram_username")) {
+    db.exec("ALTER TABLE members ADD COLUMN telegram_username TEXT");
   }
 }
 
@@ -85,9 +91,13 @@ function createDatabase() {
   if (!paymentColumns.some((column) => column.name === "username")) {
     db.exec("ALTER TABLE payments ADD COLUMN username TEXT");
   }
+  if (!paymentColumns.some((column) => column.name === "checkout_secret_hash")) {
+    db.exec("ALTER TABLE payments ADD COLUMN checkout_secret_hash TEXT");
+  }
   db.exec("CREATE INDEX IF NOT EXISTS idx_payments_contact_status ON payments(contact, status)");
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_members_normalized_contact ON members(lower(trim(contact)))");
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_members_normalized_username ON members(lower(trim(username)))");
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_members_telegram_user_id ON members(telegram_user_id) WHERE telegram_user_id IS NOT NULL");
   db.pragma("optimize");
   return db;
 }
@@ -135,6 +145,18 @@ export function getMemberById(id: number) {
   return toMember(row);
 }
 
+export function getMemberByTelegramUserId(telegramUserId: string) {
+  const row = getDb().prepare("SELECT id, name, username, contact, city, bio, profile_visibility AS profileVisibility, email_updates AS emailUpdates, profile_images AS profileImages, kit_purchased AS kitPurchased, boost_credits AS boostCredits, boost_expires_at AS boostExpiresAt, created_at AS createdAt FROM members WHERE telegram_user_id = ?").get(telegramUserId) as MemberRow | undefined;
+  return toMember(row);
+}
+
+export function linkTelegramAccount(memberId: number, telegramUserId: string, telegramUsername?: string) {
+  getDb().prepare("UPDATE members SET telegram_user_id = ?, telegram_username = ? WHERE id = ?").run(telegramUserId, telegramUsername?.trim() || null, memberId);
+  const member = getMemberById(memberId);
+  if (!member) throw new Error("MEMBER_NOT_FOUND");
+  return member;
+}
+
 export function setMemberProfileImages(id: number, profileImages: string[]) {
   getDb().prepare("UPDATE members SET profile_images = ? WHERE id = ?").run(JSON.stringify(profileImages), id);
   const member = getMemberById(id);
@@ -169,12 +191,12 @@ export function getRecentSignupEvents(afterId: number) {
   return getDb().prepare("SELECT id, created_at AS createdAt FROM members WHERE id > ? ORDER BY id ASC LIMIT 10").all(afterId) as Array<{ id: number; createdAt: string }>;
 }
 
-export function createPendingPayment({ orderId, name, username, contact, city, amount, purpose }: Omit<PendingPayment, "status" | "authUserId" | "paymentId">) {
-  getDb().prepare("INSERT INTO payments (razorpay_order_id, name, username, contact, city, amount, currency, purpose) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").run(orderId, name.trim(), username?.trim() || null, normaliseContact(contact), city.trim(), amount, "INR", purpose);
+export function createPendingPayment({ orderId, name, username, contact, city, amount, currency, purpose, checkoutSecretHash }: Omit<PendingPayment, "status" | "authUserId" | "paymentId">) {
+  getDb().prepare("INSERT INTO payments (razorpay_order_id, name, username, contact, city, amount, currency, purpose, checkout_secret_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(orderId, name.trim(), username?.trim() || null, normaliseContact(contact), city.trim(), amount, currency, purpose, checkoutSecretHash);
 }
 
 export function getPendingPayment(orderId: string) {
-  return getDb().prepare("SELECT razorpay_order_id AS orderId, name, username, contact, city, amount, purpose, status, auth_user_id AS authUserId, razorpay_payment_id AS paymentId FROM payments WHERE razorpay_order_id = ?").get(orderId) as PendingPayment | undefined;
+  return getDb().prepare("SELECT razorpay_order_id AS orderId, name, username, contact, city, amount, currency, purpose, status, auth_user_id AS authUserId, razorpay_payment_id AS paymentId, checkout_secret_hash AS checkoutSecretHash FROM payments WHERE razorpay_order_id = ?").get(orderId) as PendingPayment | undefined;
 }
 
 export function linkPaymentToAuthUser(orderId: string, authUserId: string) {
@@ -186,13 +208,13 @@ export function hasPaidOrder(contact: string) {
 }
 
 export function getPaidOrdersWithoutAuthUser(limit = 100) {
-  return getDb().prepare("SELECT razorpay_order_id AS orderId, name, username, contact, city, amount, purpose, status, auth_user_id AS authUserId, razorpay_payment_id AS paymentId FROM payments WHERE status = 'verified' AND (auth_user_id IS NULL OR auth_user_id = '') ORDER BY verified_at ASC LIMIT ?").all(limit) as PendingPayment[];
+  return getDb().prepare("SELECT razorpay_order_id AS orderId, name, username, contact, city, amount, currency, purpose, status, auth_user_id AS authUserId, razorpay_payment_id AS paymentId, checkout_secret_hash AS checkoutSecretHash FROM payments WHERE status = 'verified' AND (auth_user_id IS NULL OR auth_user_id = '') ORDER BY verified_at ASC LIMIT ?").all(limit) as PendingPayment[];
 }
 
 export function finalisePayment({ orderId, paymentId }: { orderId: string; paymentId: string }) {
   const database = getDb();
   const complete = database.transaction(() => {
-    const payment = database.prepare("SELECT razorpay_order_id AS orderId, name, username, contact, city, amount, purpose, status, auth_user_id AS authUserId, razorpay_payment_id AS paymentId FROM payments WHERE razorpay_order_id = ?").get(orderId) as PendingPayment | undefined;
+    const payment = database.prepare("SELECT razorpay_order_id AS orderId, name, username, contact, city, amount, currency, purpose, status, auth_user_id AS authUserId, razorpay_payment_id AS paymentId, checkout_secret_hash AS checkoutSecretHash FROM payments WHERE razorpay_order_id = ?").get(orderId) as PendingPayment | undefined;
     if (!payment) throw new Error("PAYMENT_NOT_FOUND");
     if (payment.status === "verified") {
       const existingMember = getMemberByContact(payment.contact);
