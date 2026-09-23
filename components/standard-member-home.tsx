@@ -4,9 +4,10 @@ import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, BadgeCheck, CalendarDays, Check, ChevronRight, Crown, LockKeyhole, MapPin, MessageCircle, ShieldCheck, Sparkles, Star, UsersRound } from "lucide-react";
 import { useEffect, useState } from "react";
-import { LanguageSwitcher, useLocale } from "@/components/locale-provider";
+import { LanguageSwitcher, useTranslation } from "@/components/locale-provider";
 import { MemberMenu, type SessionMember } from "@/components/member-menu";
 import { SiteFooter } from "@/components/site-footer";
+import { useUpgradeModal } from "@/components/prism-upgrade-modal";
 
 type Companion = { name: string; age: number; city: string; vibe: string; tags: string[]; shade: string };
 
@@ -50,7 +51,8 @@ function CompanionCard({ companion, recommended = false }: { companion: Companio
 
 export function StandardMemberHome({ member }: { member: SessionMember }) {
   const reduceMotion = useReducedMotion();
-  const { t } = useLocale();
+  const { t } = useTranslation();
+  const { openUpgradeModal } = useUpgradeModal();
   const [unreadCount, setUnreadCount] = useState(0);
   const firstName = member.name.trim().split(/\s+/)[0] || member.name;
   const city = member.city;
@@ -76,7 +78,7 @@ export function StandardMemberHome({ member }: { member: SessionMember }) {
     <nav className="relative z-20 mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-5 lg:px-8">
       <Link href="/" className="flex shrink-0 items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl border border-white/20 bg-white/[.06] text-cyan-100"><Sparkles size={18} /></span><span><span className="brand-wordmark block text-[10px] font-bold uppercase tracking-[.24em]">GIGOLO INDIA</span><span className="mt-0.5 block font-serif text-lg tracking-[.1em]">MEMBER</span></span></Link>
       <div className="hidden items-center gap-5 text-sm text-violet-100/70 lg:flex"><Link href="/browse" className="transition hover:text-cyan-100">Browse</Link><Link href="/messages" className="inline-flex items-center gap-1.5 transition hover:text-cyan-100">Messages <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-cyan-200 px-1 text-[10px] font-bold leading-none tabular-nums text-mauve-950">{unreadCount}</span></Link><a href="#bookings" className="transition hover:text-cyan-100">Bookings</a><Link href="/membership" className="transition hover:text-cyan-100">Membership</Link></div>
-      <div className="flex items-center gap-2"><LanguageSwitcher /><Link href="/membership" className="hidden items-center gap-2 rounded-full border border-amber-100/30 bg-amber-100/10 px-4 py-2 text-sm font-bold text-amber-100 transition hover:bg-amber-100 hover:text-mauve-950 sm:inline-flex"><Crown size={15} /> Upgrade to PRISM</Link><MemberMenu member={member} /></div>
+      <div className="flex items-center gap-2"><LanguageSwitcher /><button type="button" onClick={() => openUpgradeModal("member_home_header")} className="hidden items-center gap-2 rounded-full border border-amber-100/30 bg-amber-100/10 px-4 py-2 text-sm font-bold text-amber-100 transition hover:bg-amber-100 hover:text-mauve-950 sm:inline-flex"><Crown size={15} /> Upgrade to PRISM</button><MemberMenu member={member} /></div>
     </nav>
 
     <section className="relative z-10 mx-auto max-w-7xl px-5 pb-12 pt-10 lg:px-8 lg:pb-16 lg:pt-16"><div className="rounded-[2rem] border border-white/12 bg-[radial-gradient(circle_at_14%_14%,rgba(217,70,239,.24),transparent_33%),radial-gradient(circle_at_90%_78%,rgba(34,211,238,.18),transparent_36%),#151022] p-7 shadow-2xl shadow-black/20 sm:p-10"><p className="text-[10px] font-bold uppercase tracking-[.22em] text-cyan-100">MEMBER · {city}</p><h1 className="mt-4 font-serif text-5xl tracking-[-.065em] sm:text-6xl">{t("standard", "welcome", { firstName })}</h1><p className="mt-5 max-w-2xl text-base leading-7 text-violet-100/75">{t("standard", "availability", { city, count: availableCount })}</p><div className="mt-8 flex flex-wrap gap-3"><Link href={`/browse?city=${encodeURIComponent(city)}`} className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold text-mauve-950 transition hover:bg-cyan-100">{t("standard", "browseCity", { city })} <ArrowRight size={16} /></Link><a href="#bookings" className="inline-flex items-center gap-2 rounded-full border border-white/18 bg-white/[.04] px-5 py-3 text-sm font-bold text-white transition hover:border-cyan-200 hover:text-cyan-100"><CalendarDays size={16} /> View My Bookings</a></div><Link href="/profile" className="mt-6 inline-flex text-sm font-semibold text-cyan-100 transition hover:text-white">Not in {city}? Change city <ChevronRight size={15} /></Link></div></section>

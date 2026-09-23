@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { refreshSupabaseSession } from "@/lib/supabase/middleware";
 
 const locales = new Set(["en", "hi"]);
 const localeCookie = "gigolo_locale";
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // API calls and public assets must keep their original paths.
@@ -17,7 +18,7 @@ export function middleware(request: NextRequest) {
     requestHeaders.set("x-gigolo-public-path", pathname);
     const response = NextResponse.rewrite(destination, { request: { headers: requestHeaders } });
     response.cookies.set(localeCookie, firstSegment, { path: "/", sameSite: "lax", maxAge: 60 * 60 * 24 * 365 });
-    return response;
+    return refreshSupabaseSession(request, response);
   }
 
   const savedLocale = request.cookies.get(localeCookie)?.value;

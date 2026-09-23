@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { AgeGate } from "@/components/age-gate";
 import { AuthHashSession } from "@/components/auth-hash-session";
 import { LocaleProvider } from "@/components/locale-provider";
+import { PrismUpgradeProvider } from "@/components/prism-upgrade-modal";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://gig-ind.vercel.app").replace(/\/$/, "");
@@ -60,5 +61,5 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const { locale } = getRequestContext(await headers());
   const organizationJsonLd = { "@context": "https://schema.org", "@type": "Organization", name: "Gigolo India", url: siteUrl, logo: `${siteUrl}/favicon.svg`, description: "A private, adults-only companion membership platform focused on verified access, consent, and member privacy." };
   const websiteJsonLd = { "@context": "https://schema.org", "@type": "WebSite", name: "Gigolo India", url: siteUrl, inLanguage: locale === "hi" ? "hi-IN" : "en-IN" };
-  return <html lang={locale} suppressHydrationWarning className={cn("font-sans", geist.variable)}><body><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }} /><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} /><ThemeProvider><LocaleProvider><AuthHashSession /><AgeGate>{children}</AgeGate><GigoloGuide /></LocaleProvider></ThemeProvider></body></html>;
+  return <html lang={locale} suppressHydrationWarning className={cn("font-sans", geist.variable)}><body><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }} /><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} /><ThemeProvider><LocaleProvider><PrismUpgradeProvider><AuthHashSession /><AgeGate>{children}</AgeGate><GigoloGuide /></PrismUpgradeProvider></LocaleProvider></ThemeProvider></body></html>;
 }

@@ -10,7 +10,14 @@ export async function createSupabaseServerClient() {
   return createServerClient(url, key, {
     cookies: {
       getAll: () => cookieStore.getAll(),
-      setAll: () => {},
+      setAll: (cookiesToSet) => {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
+        } catch {
+          // Server Components cannot persist cookies. The middleware refreshes
+          // sessions for requests where writing the refreshed cookie is valid.
+        }
+      },
     },
   });
 }

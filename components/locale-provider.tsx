@@ -123,8 +123,16 @@ export function useLocale() {
   return context;
 }
 
+/**
+ * The single translation hook for client UI.  `useLocale` remains as a
+ * backwards-compatible alias while older components are migrated.
+ */
+export function useTranslation() {
+  return useLocale();
+}
+
 export function LanguageSwitcher({ className = "" }: { className?: string }) {
-  const { locale, setLocale, t } = useLocale();
+  const { locale, setLocale, t } = useTranslation();
   const nextLocale = locale === "en" ? "hi" : "en";
   return <button type="button" onClick={() => setLocale(nextLocale)} aria-label={t("common", "languageLabel")} className={`inline-flex items-center gap-1.5 rounded-full border border-cyan-200/30 bg-cyan-200/10 px-3 py-2 text-xs font-bold text-cyan-100 transition hover:bg-cyan-200 hover:text-mauve-950 ${className}`}><Languages size={14} />{t("common", "language")}</button>;
 }

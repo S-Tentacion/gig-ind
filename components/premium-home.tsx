@@ -15,14 +15,14 @@ import {
 import type { SessionMember } from "@/components/member-menu";
 import { MemberMenu } from "@/components/member-menu";
 import { PrismBoostPanel } from "@/components/prism-boost-panel";
-import { LanguageSwitcher, useLocale } from "@/components/locale-provider";
+import { LanguageSwitcher, useTranslation } from "@/components/locale-provider";
 
 const transition = { duration: 0.72, ease: [0.22, 1, 0.36, 1] as const };
 
 export function PremiumHome({ member }: { member: SessionMember }) {
   const reduceMotion = useReducedMotion();
   const firstName = member.name.trim().split(/\s+/)[0] || member.name;
-  const { t } = useLocale();
+  const { t } = useTranslation();
   const openBoostPurchase = () => window.dispatchEvent(new Event("gigolo-india:open-boost-purchase"));
 
   return (
