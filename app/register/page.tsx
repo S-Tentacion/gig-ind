@@ -1,18 +1,17 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { LocalizedLink as Link, useLocalizedRouter } from "@/components/localization-provider";
 import { ArrowLeft, ArrowRight, CheckCircle2, CreditCard, KeyRound, LoaderCircle, MailCheck, ShieldCheck, UserRound, X } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useSessionMember } from "@/components/member-menu";
 import { supportedCities } from "@/lib/supported-cities";
-import { createTelegramOrder, openTelegramWindow, waitForTelegramPayment, type TelegramOrder } from "@/lib/telegram-checkout-client";
+import { createCoinGateOrder, openCoinGateWindow, waitForCoinGatePayment, type CoinGateCheckoutOrder } from "@/lib/coingate-checkout-client";
 
 type Field = "name" | "username" | "city" | "email" | "password" | "confirmPassword" | "images" | "consent";
 
 export default function RegisterPage() {
-  const router = useRouter();
+  const router = useLocalizedRouter();
   const { member, loaded: sessionLoaded } = useSessionMember();
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
@@ -66,12 +65,12 @@ export default function RegisterPage() {
     setProfileImages((current) => [...current, ...selected]);
   };
 
-  const completePayment = async (order: TelegramOrder) => {
-    await waitForTelegramPayment(order);
+  const completePayment = async (order: CoinGateCheckoutOrder) => {
+    await waitForCoinGatePayment(order);
     const verified = await fetch("/api/payments/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId: order.orderId, checkoutSecret: order.checkoutSecret, password }) });
     const result = await verified.json() as { error?: string; paymentId?: string };
     if (!verified.ok) throw new Error(result.error || "Payment verification failed.");
-    if (!result.paymentId) throw new Error("Telegram confirmed payment, but the receipt reference is unavailable.");
+    if (!result.paymentId) throw new Error("CoinGate confirmed payment, but the receipt reference is unavailable.");
     setPaid(true);
     const imageForm = new FormData();
     imageForm.append("contact", email.trim().toLowerCase());
@@ -96,9 +95,10 @@ export default function RegisterPage() {
     if (invalidField) { formRef.current?.querySelector<HTMLElement>(`#${invalidField}`)?.focus(); return; }
     setLoading(true);
     try {
-      const popup = openTelegramWindow();
-      const order = await createTelegramOrder({ name, username: trimmedUsername, city, contact: normalizedEmail }, popup);
+      const popup = openCoinGateWindow();
+      const order = await createCoinGateOrder({ name, username: trimmedUsername, city, contact: normalizedEmail, source: "registration", returnPath: "/register" }, popup);
       await completePayment(order);
+      popup?.close();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "We could not start payment.");
       setLoading(false);
@@ -111,13 +111,13 @@ export default function RegisterPage() {
   return <main className="min-h-screen bg-[#0d0918] px-5 py-5 text-white sm:p-8">
     <header className="mx-auto flex max-w-6xl items-center justify-between"><Link href="/" className="flex items-center gap-2.5"><span className="brand-glow grid h-9 w-9 place-items-center rounded-full text-sm font-semibold">G</span><span className="brand-wordmark font-serif text-lg">Gigolo India</span></Link></header>
     <section className="mx-auto grid max-w-6xl items-start gap-12 py-14 lg:grid-cols-2 lg:py-10">
-      <div className="hidden lg:block"><p className="text-xs font-semibold uppercase tracking-[.18em] text-cyan-100">Private member access</p><h1 className="mt-4 max-w-md font-serif text-6xl leading-[.98] tracking-tight">Join in minutes.</h1><p className="mt-5 max-w-sm text-base leading-7 text-violet-100/65">Create your account, then complete payment to activate it.</p><div className="mt-8 space-y-4">{[[ShieldCheck, "Your details stay private"], [UserRound, "Customers see your username, not your legal name"], [CheckCircle2, "Adults 18+ only"], [KeyRound, "Your password protects your account"]].map(([Icon, text]) => { const Glyph = Icon as typeof ShieldCheck; return <div key={String(text)} className="flex items-center gap-3 text-sm text-violet-100/70"><Glyph size={18} className="text-cyan-100" />{String(text)}</div>; })}</div><div className="mt-12 max-w-md rounded-2xl border border-white/10 bg-white/[.025] p-6"><h2 className="font-serif text-2xl">How it works</h2><ol className="mt-6 space-y-6">{[["Make it yours", "Choose your username, add your details, and upload 3–5 photos."], ["Activate your membership", "Complete the ⭐ 1,325 Standard membership payment in Telegram."], ["Sign in and get started", "Use your email and password. Add PRISM Premium later if you choose."]].map(([title, detail], index) => <li key={title} className="flex gap-4"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-cyan-100/20 text-xs text-cyan-100">{index + 1}</span><div><h3 className="text-sm font-semibold">{title}</h3><p className="mt-1 text-sm leading-6 text-violet-100/60">{detail}</p></div></li>)}</ol></div></div>
+      <div className="hidden lg:block"><p className="text-xs font-semibold uppercase tracking-[.18em] text-cyan-100">Private member access</p><h1 className="mt-4 max-w-md font-serif text-6xl leading-[.98] tracking-tight">Join in minutes.</h1><p className="mt-5 max-w-sm text-base leading-7 text-violet-100/65">Create your account, then complete payment to activate it.</p><div className="mt-8 space-y-4">{[[ShieldCheck, "Your details stay private"], [UserRound, "Customers see your username, not your legal name"], [CheckCircle2, "Adults 18+ only"], [KeyRound, "Your password protects your account"]].map(([Icon, text]) => { const Glyph = Icon as typeof ShieldCheck; return <div key={String(text)} className="flex items-center gap-3 text-sm text-violet-100/70"><Glyph size={18} className="text-cyan-100" />{String(text)}</div>; })}</div><div className="mt-12 max-w-md rounded-2xl border border-white/10 bg-white/[.025] p-6"><h2 className="font-serif text-2xl">How it works</h2><ol className="mt-6 space-y-6">{[["Make it yours", "Choose your username, add your details, and upload 3–5 photos."], ["Activate your membership", "Complete the ₹1,500 Standard membership payment through CoinGate."], ["Sign in and get started", "Use your email and password. Add PRISM Premium later if you choose."]].map(([title, detail], index) => <li key={title} className="flex gap-4"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-cyan-100/20 text-xs text-cyan-100">{index + 1}</span><div><h3 className="text-sm font-semibold">{title}</h3><p className="mt-1 text-sm leading-6 text-violet-100/60">{detail}</p></div></li>)}</ol></div></div>
       <div className="rounded-[2rem] border border-white/12 bg-[#151022] p-6 shadow-xl sm:p-9"><Link href="/" className="inline-flex items-center gap-2 text-xs text-violet-100/65 hover:text-cyan-100"><ArrowLeft size={14} /> Back to home</Link>
         {recoveryScreen ? <div className="mt-7"><span className="grid h-12 w-12 place-items-center rounded-2xl bg-cyan-200/10 text-cyan-100"><MailCheck size={21} /></span><h2 className="mt-5 font-serif text-4xl">{paid ? "Payment confirmed." : "You already have an account."}</h2><p className="mt-4 text-sm leading-6 text-violet-100/70">{paid ? "Your account has been created. Sign in with the email address and password you chose during registration." : "This email already has a paid account. Sign in with your email address and password."}</p><div className="mt-7 grid gap-3"><Link href="/login" className="inline-flex w-full items-center justify-center rounded-full bg-white px-5 py-3 text-sm font-bold text-mauve-950">Sign In <ArrowRight size={16} /></Link></div>{error && <p role="alert" className="mt-5 rounded-xl border border-rose-200/25 bg-rose-200/10 p-4 text-sm text-rose-100">{error}</p>}{notice && <p role="status" className="mt-5 rounded-xl border border-cyan-200/25 bg-cyan-200/10 p-4 text-sm text-cyan-100">{notice}</p>}</div> : <form ref={formRef} onSubmit={startCheckout} noValidate className="mt-7">
   <ol aria-label="Registration progress" className="mb-7 flex items-center gap-3 text-xs sm:text-sm">
     <li aria-current={!loading ? "step" : undefined} className={!loading ? "font-semibold text-cyan-100" : "text-violet-100/60"}>Step 1: Your Details</li>
     <ArrowRight size={16} aria-hidden="true" className="shrink-0 text-violet-100/40" />
-    <li aria-current={loading ? "step" : undefined} className={loading ? "font-semibold text-cyan-100" : "text-violet-100/50"}>Step 2: Telegram Payment</li>
+    <li aria-current={loading ? "step" : undefined} className={loading ? "font-semibold text-cyan-100" : "text-violet-100/50"}>Step 2: CoinGate Payment</li>
   </ol>
   <h2 className="font-serif text-4xl">Join in minutes.</h2>
   <p className="mt-3 text-sm leading-6 text-violet-100/65">Create your account, then complete payment to activate it.</p>
@@ -152,11 +152,11 @@ export default function RegisterPage() {
       <p id="photo-error" role="alert" className="mt-2 text-xs text-rose-200">{photoError}</p>{errorMessage("images")}
       {profileImages.length > 0 && <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-5">{profileImages.map((image, index) => <div key={image.name + index} className="relative aspect-square rounded-lg bg-white/10">{previews[index] && <img src={previews[index]} alt={"Selected profile photo " + (index + 1)} className="h-full w-full rounded-lg object-cover" />}<button type="button" onClick={() => { setProfileImages((current) => current.filter((_, imageIndex) => imageIndex !== index)); setPhotoError(""); touch("images"); }} aria-label={"Remove profile photo " + (index + 1)} className="absolute right-1 top-1 grid h-7 w-7 place-items-center rounded-full bg-black/80 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-200"><X size={14} /></button></div>)}</div>}
     </div>
-    <div className="mt-5 rounded-xl bg-white/[.06] px-4 py-4"><div className="flex items-center justify-between gap-3 text-sm"><span className="flex items-center gap-2"><CreditCard size={16} aria-hidden="true" className="shrink-0 text-cyan-100" />Membership fee (Standard)</span><strong className="shrink-0">⭐ 1,325</strong></div><p className="mt-2 text-xs leading-5 text-violet-100/60">Paid securely in Telegram Stars. This is separate from PRISM Premium, which you can add later from your account.</p></div>
+    <div className="mt-5 rounded-xl bg-white/[.06] px-4 py-4"><div className="flex items-center justify-between gap-3 text-sm"><span className="flex items-center gap-2"><CreditCard size={16} aria-hidden="true" className="shrink-0 text-cyan-100" />Membership fee (Standard)</span><strong className="shrink-0">₹1,500</strong></div><p className="mt-2 text-xs leading-5 text-violet-100/60">Paid securely through CoinGate. This is separate from PRISM Premium, which you can add later from your account.</p></div>
     <div className="mt-5"><div className="flex items-start gap-3"><input id="consent" name="consent" required type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} onBlur={() => touch("consent")} aria-invalid={Boolean(fieldError("consent"))} aria-describedby="consent-error" className="mt-1 h-4 w-4 shrink-0 accent-cyan-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-200" /><label htmlFor="consent" className="text-xs leading-6 text-violet-100/75">I confirm I am 18 or older and agree to the <Link href="/terms" target="_blank" rel="noopener noreferrer" className="text-cyan-100 underline underline-offset-2">Terms of Use<span className="sr-only"> (opens in a new tab)</span></Link> and <Link href="/privacy" target="_blank" rel="noopener noreferrer" className="text-cyan-100 underline underline-offset-2">Privacy Policy<span className="sr-only"> (opens in a new tab)</span></Link>.</label></div>{errorMessage("consent")}</div>
   </fieldset>
   {error && <p role="alert" className="mt-4 text-sm text-rose-200">{error}</p>}
-  <Button disabled={loading || !consent} type="submit" className="mt-6 w-full bg-white text-mauve-950 hover:bg-cyan-100 disabled:opacity-40">{loading ? <><LoaderCircle className="animate-spin" size={16} /> Waiting for Telegram…</> : <>Pay ⭐ 1,325 in Telegram <ArrowRight size={16} /></>}</Button>
+  <Button disabled={loading || !consent} type="submit" className="mt-6 w-full bg-white text-mauve-950 hover:bg-cyan-100 disabled:opacity-40">{loading ? <><LoaderCircle className="animate-spin" size={16} /> Waiting for CoinGate…</> : <>Pay ₹1,500 with CoinGate <ArrowRight size={16} /></>}</Button>
 </form>}
         <p className="mt-7 text-center text-xs text-violet-100/55">Already a member? <Link href="/login" className="font-semibold text-cyan-100 hover:underline">Sign In</Link></p>
       </div>

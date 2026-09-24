@@ -1,12 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { LocalizedLink as Link, useLocalizedRouter } from "@/components/localization-provider";
 import { ArrowRight, KeyRound, LoaderCircle } from "lucide-react";
 import { FormEvent, useState } from "react";
 
 export default function SetPasswordPage() {
-  const router = useRouter();
+  const router = useLocalizedRouter();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);

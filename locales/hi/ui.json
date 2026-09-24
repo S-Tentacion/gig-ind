@@ -366,5 +366,12 @@
   "Payment was not accepted": "भुगतान स्वीकार नहीं हुआ",
   "Payment returned": "भुगतान वापस किया गया",
   "Payment status is set only after server-side verification. Your card or bank details are never displayed here.": "भुगतान स्थिति केवल सर्वर-साइड सत्यापन के बाद सेट की जाती है। आपके कार्ड या बैंक विवरण यहाँ कभी नहीं दिखाए जाते।",
-  "Account action": "खाते पर कार्रवाई"
+  "Account action": "खाते पर कार्रवाई",
+  "Gigolo India is for adults aged 18 and above. Users are responsible for following local laws. We do not tolerate coercion, trafficking, exploitation, harassment, or misconduct.": "Gigolo India केवल 18 वर्ष और उससे अधिक उम्र के वयस्कों के लिए है। उपयोगकर्ता स्थानीय कानूनों का पालन करने के लिए जिम्मेदार हैं। हम दबाव, तस्करी, शोषण, उत्पीड़न या दुर्व्यवहार को स्वीकार नहीं करते।",
+  "Adults Only (18+)": "केवल वयस्कों के लिए (18+)",
+  "Gigolo India is for adults aged 18 and above. By entering, you confirm you are 18+ and that this content is legal where you live.": "Gigolo India केवल 18 वर्ष या उससे अधिक आयु के वयस्कों के लिए है। प्रवेश करके आप पुष्टि करते हैं कि आपकी आयु 18+ है और यह सामग्री आपके क्षेत्र में कानूनी है।",
+  "I'm 18+ — Enter": "मैं 18+ हूँ — प्रवेश करें",
+  "Leave": "बाहर जाएँ",
+  "Toggle color theme": "रंग थीम बदलें",
+  "Step {number}": "चरण {number}"
 }

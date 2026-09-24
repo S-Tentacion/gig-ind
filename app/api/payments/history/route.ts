@@ -58,7 +58,6 @@ export async function GET() {
 
     const summary = {
       totalPaidPaise: transactions.filter((transaction) => transaction.status === "verified" && transaction.currency === "INR").reduce((total, transaction) => total + transaction.amountPaise, 0),
-      totalPaidStars: transactions.filter((transaction) => transaction.status === "verified" && transaction.currency === "XTR").reduce((total, transaction) => total + transaction.amountPaise, 0),
       accepted: transactions.filter((transaction) => transaction.status === "verified").length,
       pending: transactions.filter((transaction) => transaction.status === "created").length,
       rejected: transactions.filter((transaction) => transaction.status === "failed").length,

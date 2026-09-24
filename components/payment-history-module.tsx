@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { LanguageSwitcher, LocalizedLink as Link, useLocalizedRouter } from "@/components/localization-provider";
 import { BadgeCheck, CheckCircle2, ChevronLeft, CircleAlert, Clock3, CreditCard, FileText, LoaderCircle, MapPin, ReceiptText, RefreshCw, ShieldCheck, Sparkles, XCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { LanguageSwitcher } from "@/components/locale-provider";
 import { MemberMenu, useSessionMember } from "@/components/member-menu";
 
 type PaymentStatus = "created" | "verified" | "failed" | "refunded";
@@ -24,7 +22,7 @@ type Transaction = {
   refundedAt: string | null;
 };
 
-type Summary = { totalPaidPaise: number; totalPaidStars: number; accepted: number; pending: number; rejected: number; refunded: number };
+type Summary = { totalPaidPaise: number; accepted: number; pending: number; rejected: number; refunded: number };
 type Filter = "all" | PaymentStatus;
 
 const filters: Array<{ value: Filter; label: string }> = [
@@ -49,7 +47,6 @@ const paymentTypeMeta: Record<PaymentType, { label: string; description: string;
 };
 
 function formatMoney(amountPaise: number, currency: string) {
-  if (currency === "XTR") return `⭐ ${amountPaise.toLocaleString("en-IN")}`;
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: currency || "INR", maximumFractionDigits: 0 }).format(amountPaise / 100);
 }
 
@@ -65,7 +62,7 @@ function shortenedReference(value: string) {
 }
 
 export function PaymentHistoryModule() {
-  const router = useRouter();
+  const router = useLocalizedRouter();
   const { member, loaded } = useSessionMember();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -94,7 +91,7 @@ export function PaymentHistoryModule() {
         }
         if (!ok) throw new Error(data.error ?? "We could not load your payment history.");
         setTransactions(data.transactions ?? []);
-        setSummary(data.summary ?? { totalPaidPaise: 0, totalPaidStars: 0, accepted: 0, pending: 0, rejected: 0, refunded: 0 });
+        setSummary(data.summary ?? { totalPaidPaise: 0, accepted: 0, pending: 0, rejected: 0, refunded: 0 });
       })
       .catch((caught) => { if (active) setError(caught instanceof Error ? caught.message : "We could not load your payment history."); })
       .finally(() => { if (active) setLoading(false); });
@@ -118,7 +115,7 @@ export function PaymentHistoryModule() {
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <article className="rounded-2xl border border-white/12 bg-white/[.035] p-5"><CreditCard size={19} className="text-cyan-100" /><p className="mt-5 text-[10px] font-bold uppercase tracking-[.16em] text-violet-100/45">Stars accepted</p><p className="mt-2 font-serif text-3xl">{formatMoney(summary?.totalPaidStars ?? 0, "XTR")}</p><p className="mt-2 text-xs text-violet-100/60">Verified Telegram total</p></article>
+          <article className="rounded-2xl border border-white/12 bg-white/[.035] p-5"><CreditCard size={19} className="text-cyan-100" /><p className="mt-5 text-[10px] font-bold uppercase tracking-[.16em] text-violet-100/45">Total paid</p><p className="mt-2 font-serif text-3xl">{formatMoney(summary?.totalPaidPaise ?? 0, "INR")}</p><p className="mt-2 text-xs text-violet-100/60">Verified CoinGate total</p></article>
           <article className="rounded-2xl border border-emerald-200/20 bg-emerald-300/[.06] p-5"><CheckCircle2 size={19} className="text-emerald-100" /><p className="mt-5 text-[10px] font-bold uppercase tracking-[.16em] text-emerald-100/70">Accepted</p><p className="mt-2 font-serif text-3xl">{summary?.accepted ?? 0}</p><p className="mt-2 text-xs text-violet-100/60">Confirmed payments</p></article>
           <article className="rounded-2xl border border-amber-100/20 bg-amber-100/[.06] p-5"><Clock3 size={19} className="text-amber-100" /><p className="mt-5 text-[10px] font-bold uppercase tracking-[.16em] text-amber-100/70">Pending</p><p className="mt-2 font-serif text-3xl">{summary?.pending ?? 0}</p><p className="mt-2 text-xs text-violet-100/60">Awaiting confirmation</p></article>
           <article className="rounded-2xl border border-rose-200/20 bg-rose-300/[.06] p-5"><CircleAlert size={19} className="text-rose-100" /><p className="mt-5 text-[10px] font-bold uppercase tracking-[.16em] text-rose-100/70">Rejected</p><p className="mt-2 font-serif text-3xl">{summary?.rejected ?? 0}</p><p className="mt-2 text-xs text-violet-100/60">Unsuccessful payments</p></article>

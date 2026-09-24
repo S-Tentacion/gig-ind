@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { LocalizedLink as Link } from "@/components/localization-provider";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
@@ -19,7 +19,7 @@ import {
   Star,
   X,
 } from "lucide-react";
-import { LanguageSwitcher } from "@/components/locale-provider";
+import { LanguageSwitcher } from "@/components/localization-provider";
 import { MemberMenu, useSessionMember } from "@/components/member-menu";
 import { SiteFooter } from "@/components/site-footer";
 import { FilterSelect } from "@/components/filter-select";

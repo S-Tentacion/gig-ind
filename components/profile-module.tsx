@@ -1,11 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { LocalizedLink as Link, useLocalizedRouter } from "@/components/localization-provider";
 import { Check, ChevronLeft, Copy, ImagePlus, LoaderCircle, LockKeyhole, Mail, MapPin, Save, ShieldCheck, Trash2, UserRound, X } from "lucide-react";
 import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import { MemberMenu, type SessionMember } from "@/components/member-menu";
-import { TelegramLoginButton } from "@/components/telegram-login-button";
 
 type Profile = SessionMember & {
   username: string;
@@ -22,7 +20,7 @@ function memberCode(id: number) {
 }
 
 export function ProfileModule() {
-  const router = useRouter();
+  const router = useLocalizedRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [form, setForm] = useState({ name: "", city: "", bio: "", profileVisibility: "private" as Profile["profileVisibility"], emailUpdates: true });
   const [loading, setLoading] = useState(true);
@@ -33,9 +31,6 @@ export function ProfileModule() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    const telegramState = new URLSearchParams(window.location.search).get("telegram");
-    if (telegramState === "linked") setNotice("Telegram sign-in is now linked to your membership.");
-    else if (telegramState === "conflict") setError("That Telegram account is already linked to another membership.");
     let active = true;
     fetch("/api/profile", { cache: "no-store" })
       .then(async (response) => ({ ok: response.ok, status: response.status, data: await response.json() as { profile?: Profile; error?: string } }))
@@ -145,7 +140,6 @@ export function ProfileModule() {
             <div className="mt-7 border-y border-white/10 py-5"><div className="flex items-center justify-between text-xs"><span className="text-violet-100/60">Profile completion</span><strong className="text-cyan-100">{completion}%</strong></div><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-fuchsia-300 to-cyan-200" style={{ width: `${completion}%` }} /></div></div>
             <div className="mt-5 rounded-2xl border border-white/10 bg-white/[.035] p-4"><p className="text-[10px] font-bold uppercase tracking-[.15em] text-violet-100/50">MEMBER ID</p><div className="mt-2 flex items-center justify-between gap-3"><span className="font-mono text-sm font-semibold tracking-[.12em] text-cyan-100">{memberCode(profile.id)}</span><button type="button" onClick={copyMemberId} aria-label="Copy member ID" className="grid h-8 w-8 place-items-center rounded-lg border border-white/10 text-violet-100/70 transition hover:border-cyan-200 hover:text-cyan-100">{copied ? <Check size={15} className="text-emerald-300" /> : <Copy size={15} />}</button></div></div>
             <div className="mt-5 flex items-center gap-2 text-sm text-violet-100/65"><MapPin size={15} className="text-cyan-100" /> {profile.city}</div><div className="mt-3 flex items-center gap-2 text-sm text-violet-100/65"><Mail size={15} className="text-cyan-100" /> {profile.contact}</div>
-            <div className="mt-6 rounded-2xl border border-white/10 bg-white/[.035] p-4"><p className="text-[10px] font-bold uppercase tracking-[.15em] text-cyan-100">TELEGRAM SIGN-IN</p><p className="mt-2 text-xs leading-5 text-violet-100/60">Link your Telegram account so you can use it to sign in next time.</p><div className="mt-3"><TelegramLoginButton next="/profile" /></div></div>
           </aside>
 
           <form onSubmit={saveProfile} className="rounded-[2rem] border border-white/12 bg-[#151022]/85 p-6 shadow-2xl shadow-black/20 backdrop-blur-xl sm:p-8">

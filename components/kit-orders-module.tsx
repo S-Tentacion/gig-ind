@@ -1,20 +1,20 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { LocalizedLink as Link, useLocalizedRouter } from "@/components/localization-provider";
 import { ArrowRight, Box, ChevronLeft, Clock3, HelpCircle, MapPin, PackageCheck, ShieldCheck } from "lucide-react";
 import { useEffect } from "react";
 import { MemberMenu, useSessionMember } from "@/components/member-menu";
 import { KitDeliveryStepper } from "@/components/kit-delivery-stepper";
+import { ROUTES } from "@/lib/routes";
 
 export function KitOrdersModule() {
-  const router = useRouter();
+  const router = useLocalizedRouter();
   const { member, loaded } = useSessionMember();
 
   useEffect(() => {
     if (!loaded) return;
-    if (!member) router.replace("/login");
-    else if (!member.kitPurchased) router.replace("/buy");
+    if (!member) router.replace(ROUTES.login);
+    else if (!member.kitPurchased) router.replace(ROUTES.membership);
   }, [loaded, member, router]);
   if (!loaded || !member) return <main className="grid min-h-screen place-items-center bg-[#0d0918] text-cyan-100"><Clock3 className="animate-spin" aria-label="Loading orders" /></main>;
   if (!member.kitPurchased) return <main className="grid min-h-screen place-items-center bg-[#0d0918] text-cyan-100"><Clock3 className="animate-spin" aria-label="Redirecting to Kit" /></main>;

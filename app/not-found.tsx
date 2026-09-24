@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { LocalizedLink as Link } from "@/components/localization-provider";
 import { ArrowLeft, Compass, Sparkles } from "lucide-react";
 
 export default function NotFound() {

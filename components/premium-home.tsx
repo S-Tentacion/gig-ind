@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { LocalizedLink as Link } from "@/components/localization-provider";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   BadgeCheck,
@@ -15,7 +15,7 @@ import {
 import type { SessionMember } from "@/components/member-menu";
 import { MemberMenu } from "@/components/member-menu";
 import { PrismBoostPanel } from "@/components/prism-boost-panel";
-import { LanguageSwitcher, useTranslation } from "@/components/locale-provider";
+import { LanguageSwitcher, useTranslation } from "@/components/localization-provider";
 
 const transition = { duration: 0.72, ease: [0.22, 1, 0.36, 1] as const };
 

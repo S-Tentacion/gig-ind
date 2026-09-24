@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { LocalizedLink as Link } from "@/components/localization-provider";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, BadgeCheck, Check, ChevronRight, LockKeyhole, MapPin, ShieldCheck, Sparkles, Star, UsersRound } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -9,7 +9,7 @@ import { MemberMenu, type SessionMember } from "@/components/member-menu";
 import { PremiumHome } from "@/components/premium-home";
 import { SiteFooter } from "@/components/site-footer";
 import { StandardMemberHome } from "@/components/standard-member-home";
-import { LanguageSwitcher, useTranslation } from "@/components/locale-provider";
+import { LanguageSwitcher, useTranslation } from "@/components/localization-provider";
 
 const cities = ["Delhi", "Mumbai", "Bengaluru", "Hyderabad", "Pune", "Goa", "Chennai", "Kolkata"];
 const companions = [

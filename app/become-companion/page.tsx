@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { LocalizedLink as Link } from "@/components/localization-provider";
 import { ArrowRight, Check, ShieldCheck } from "lucide-react";
 
 export default function BecomeCompanionPage() {

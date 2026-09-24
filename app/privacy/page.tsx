@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { LocalizedLink as Link } from "@/components/localization-provider";
 import { CheckCircle2, Flag, LockKeyhole, ShieldCheck, UsersRound } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
 

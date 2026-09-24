@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { LanguageSwitcher, LocalizedLink as Link, useLocalizedRouter } from "@/components/localization-provider";
 import { ArrowLeft, CheckCheck, ChevronLeft, CircleAlert, Inbox, LoaderCircle, MapPin, MessageCircle, RefreshCw, Send, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { LanguageSwitcher } from "@/components/locale-provider";
 import { MemberMenu, useSessionMember } from "@/components/member-menu";
 
 type InboxItem = {
@@ -53,7 +51,7 @@ function previewFor(item: InboxItem) {
 }
 
 export function MessagesModule() {
-  const router = useRouter();
+  const router = useLocalizedRouter();
   const { member, loaded } = useSessionMember();
   const [conversations, setConversations] = useState<InboxItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);

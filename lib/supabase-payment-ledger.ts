@@ -11,6 +11,8 @@ type PaymentRecord = {
   amount: number;
   currency?: string;
   purpose: PaymentPurpose;
+  provider?: string;
+  source?: string | null;
 };
 
 type VerifiedPaymentInput = {
@@ -35,7 +37,7 @@ function purchasedBoostCredits(purpose: PaymentPurpose) {
 
 function paymentRow(payment: PaymentRecord) {
   return {
-    provider: payment.currency === "XTR" ? "telegram" : "razorpay",
+    provider: payment.provider || "coingate",
     provider_order_id: payment.orderId,
     member_contact: normaliseContact(payment.contact),
     member_username: payment.username?.trim() || null,
@@ -43,8 +45,9 @@ function paymentRow(payment: PaymentRecord) {
     payment_type: paymentType(payment.purpose),
     purpose: paymentPurpose(payment.purpose),
     boost_credits: purchasedBoostCredits(payment.purpose),
-    amount_paise: payment.amount,
+    amount_paise: Math.round(payment.amount * 100),
     currency: payment.currency || "INR",
+    metadata: payment.source ? { source: payment.source } : {},
   };
 }
 
@@ -97,11 +100,6 @@ export async function syncMemberProfile({ member, authUserId }: { member: Member
   if (error) throw ledgerError("SUPABASE_MEMBER_PROFILE_SYNC_FAILED");
 }
 
-export async function linkTelegramMemberProfile({ authUserId, telegramUserId, telegramUsername }: { authUserId: string; telegramUserId: string; telegramUsername?: string }) {
-  const admin = createSupabaseAdminClient();
-  const { error } = await admin.from("member_profiles").update({ telegram_user_id: telegramUserId, telegram_username: telegramUsername?.trim() || null }).eq("id", authUserId);
-  if (error) throw ledgerError("SUPABASE_TELEGRAM_LINK_FAILED");
-}
 
 /** Saves a provider order before checkout is opened. No payment credentials or passwords are stored. */
 export async function recordPaymentOrder(payment: PaymentRecord) {
@@ -111,6 +109,13 @@ export async function recordPaymentOrder(payment: PaymentRecord) {
     { onConflict: "provider_order_id" },
   );
   if (error) throw ledgerError("SUPABASE_PAYMENT_ORDER_WRITE_FAILED");
+}
+
+/** Checks the private ledger before creating a remote provider order. */
+export async function assertPaymentLedgerReady() {
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.from("payment_transactions").select("id").limit(1);
+  if (error) throw ledgerError("SUPABASE_PAYMENT_LEDGER_UNAVAILABLE");
 }
 
 /**
